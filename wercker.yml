@@ -1,0 +1,1102 @@
+workflows:
+  - name: tests
+    pipelines:
+      - name: build
+      #
+      - name: test-docker-build1
+        requires:
+          - build
+      - name: test-docker-build2
+        requires:
+          - test-docker-build1
+      #
+      - name: test-docker-push-classic1
+        requires:
+          - build      
+      - name: test-docker-push-classic2
+        requires:
+          - test-docker-push-classic1
+      #      
+      - name: test-docker-scratch-push1
+        requires:
+          - build
+      - name: test-docker-scratch-push2
+        requires: 
+          - test-docker-scratch-push1
+      #
+      - name: test-non-rdd-artifacts1
+        requires:
+          - build
+      - name: test-non-rdd-artifacts2
+        requires: 
+          - test-non-rdd-artifacts1
+      #
+      - name: test-rdd-artifacts1
+        requires:
+          - build
+      - name: test-rdd-artifacts2
+        requires: 
+          - test-rdd-artifacts1
+      #          
+      - name: test-rdd1
+        requires:
+          - build
+      - name: test-rdd2
+        requires: 
+          - test-rdd1
+      #
+      - name: test-fn1
+        requires:
+          - build
+      #
+      - name: test-fn2
+        requires:
+          - build
+      #
+      - name: test-rdd-volumes1
+        requires:
+          - build
+      #
+      - name: test-rdd-volumes2
+        requires:
+          - build
+
+build: 
+  # The build step doesn't do very much 
+  # It generates a unique ID, runs the unit tests and is a common prerequisite for all subsequent pipelines
+  box: golang
+  steps:
+    - script:
+        name: Create a unique id for the run, common to all pipelines in the workflow
+        code: |
+          echo Creating a unique id for the run, common to all pipelines in the workflow
+          echo and save it in /pipeline/output ready for the next pipeline to use
+          echo `date +%s%N`-${PROD_OR_STAGING} > /pipeline/output/build-id
+          export BUILDID=`cat /pipeline/output/build-id`
+          echo BUILDID=$BUILDID
+    - script:    
+        name: Check environment variables
+        code: |
+          if [[ -z "$USERNAME" ]]; then
+            echo Environment variable \$USERNAME is not set
+            return 1
+          fi   
+          if [[ -z "$PASSWORD" ]]; then
+            echo Environment variable \$PASSWORD is not set
+            return 1
+          fi  
+          if [[ -z "$PROD_OR_STAGING" ]]; then
+            echo Environment variable \$PROD_OR_STAGING is not set
+            return 1
+          fi      
+    - script:
+        name: Edit source to add build ID
+        # this is so we can be sure that we are testing the right version of our images
+        code: |
+          sed -i "s/Hello World!!/Hello World!! ${BUILDID}/g" main.go   
+          cat main.go          
+    - script:
+        name: Copy contents of the cloned repo to /pipeline/output for next pipeline to use
+        code: cp -r /pipeline/source/* /pipeline/output
+    - script: 
+        name: Run the unit tests
+        code: |
+          go test ./...     
+
+test-docker-build1:
+  # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
+  box: alpine:edge
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - internal/docker-build: 
+        dockerfile: Dockerfile 
+        image-name: my-new-image # name used to refer to this image until it's pushed   
+    - internal/docker-run:
+        image: my-new-image
+        name: myTestContainer
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl 
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://myTestContainer:5000); do printf '.'; sleep 5; done        
+    - script: 
+        name: Test the container that we started using docker-run
+        code: |
+            if curlOutput=`curl -s myTestContainer:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi           
+    - internal/docker-kill:
+        name: myTestContainer           
+    - internal/docker-push:    
+        image-name: my-new-image
+        username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
+        password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
+        repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
+        tag: latest #test-docker-build       
+test-docker-build2:
+  # Test the docker-build step (part 2)
+  # Test that we can pull the newly-created image, start it as a service, and connect to it
+  box: alpine:edge
+  services: 
+    - name: test-docker-build-container
+      id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-build
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output    
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl 
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://test-docker-build-container:5000); do printf '.'; sleep 5; done 
+    - script: 
+        name: Test the container that we started as a service
+        code: |
+            if curlOutput=`curl -s test-docker-build-container:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi          
+test-docker-push-classic1:
+  # Test the "classic" docker-push step (which commits the current container) (part 1) 
+  box: golang
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Build the executable. This will be run in a golang base image created by committing the current container, so no need to worry about dependencies
+        code: |
+          go build -o myapp 
+          echo veryfying build
+          pwd
+          ls -l           
+    - internal/docker-push: 
+        username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
+        password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
+        repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
+        tag: test-docker-push-classic
+        cmd: /pipeline/source/myapp
+        ports: "5000"
+  after-steps:
+    - script:
+        name: The after step
+        code: |
+          echo "Running after step"           
+test-docker-push-classic2:
+  # Test the "classic" docker-push step (which commits the current container) (part 2) 
+  # Test that we can pull the newly-created image, start it and connect to it
+  box: alpine:edge
+  services: 
+    - name: test-docker-classic-push-container
+      id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-push-classic
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output      
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl 
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://test-docker-classic-push-container:5000); do printf '.'; sleep 5; done 
+    - script: 
+        name: Test the container
+        code: |
+            if curlOutput=`curl -s test-docker-classic-push-container:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi     
+test-docker-scratch-push1:
+  # Test the docker-scratch-push step (which copies the output to a scratch image) (part 1) 
+  box: golang
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Build the executable. 
+        code: |
+          # This will be run in a minimal image so must not have any dependencies
+          CGO_ENABLED=0 go build -a -ldflags '-s' -installsuffix cgo -o /pipeline/output/myapp .
+    - internal/docker-scratch-push: 
+        username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
+        password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
+        repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
+        tag: test-docker-scratch-push
+        cmd: /myapp
+        ports: "5000/tcp," 
+test-docker-scratch-push2:
+  # Test the docker-scratch-push step (which copies the output to a scratch image) (part 2) 
+  # Test that we can pull the newly-created image, start it and connect to it
+  box: alpine:edge
+  services: 
+    - name: test-docker-scratch-push-container
+      id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-scratch-push
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output        
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl 
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://test-docker-scratch-push-container:5000); do printf '.'; sleep 5; done 
+    - script: 
+        name: Test the container
+        code: |
+            if curlOutput=`curl -s test-docker-scratch-push-container:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi                              
+test-rdd1:
+  # Test that we can use a remote docker daemon to build, run, test and push an image (part 1)
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Install docker
+        code: apk --no-cache add docker           
+    - script:
+        name: Explore the docker daemon 
+        code: |
+          echo DOCKER_HOST=$DOCKER_HOST
+          echo Running docker version
+          docker version
+          echo running docker ps
+          docker ps
+          echo running docker images
+          docker images
+    - script:
+        name: native docker build 
+        code: |
+          docker build -t docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-rdd .
+          echo running docker images
+          docker images
+    - script:
+        name: start the newly-created image using docker run 
+        code: |
+          docker run --rm -d -p 5000:5000 --name container-test-rdd-$BUILDID --network=$DOCKER_NETWORK_NAME docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-rdd
+          echo running docker ps
+          docker ps
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl                
+    - script:
+        name: See our public IP address
+        code: |
+          curl -s ifconfig.co
+          curl -s -4 ifconfig.co     
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          ping -c 3 container-test-rdd-$BUILDID
+          until $(curl --output /dev/null --silent --head --fail http://container-test-rdd-$BUILDID:5000); do printf '.'; sleep 5; done 
+    - script: 
+        name: Test the container 
+        code: |
+            if curlOutput=`curl -s container-test-rdd-$BUILDID:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi               
+    - script:
+        name: kill the container using docker kill
+        code: |
+          docker kill container-test-rdd-$BUILDID
+          echo running docker ps
+          docker ps
+    - script:
+        name: push the newly-create image to a repository
+        code: |
+          docker login -u $USERNAME -p $PASSWORD 
+          docker push docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-rdd
+test-rdd2:
+  # Test the image that was pushed by test-rdd1
+  # Note that this uses a different daemon so this will require the image to be pulled from the registry
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output    
+    - script:
+        name: Install docker
+        code: apk --no-cache add docker            
+    - script:
+        name: start the image using docker run 
+        code: |
+          docker run --rm -d -p 5000:5000 --name container-test-rdd-$BUILDID --network=$DOCKER_NETWORK_NAME docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-rdd
+          echo running docker ps
+          docker ps
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl                
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://container-test-rdd-$BUILDID:5000); do printf '.'; sleep 5; done 
+    - script: 
+        name: Test the container 
+        code: |
+            if curlOutput=`curl -s container-test-rdd-$BUILDID:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi               
+    - script:
+        name: kill the container using docker kill
+        code: |
+          docker kill container-test-rdd-$BUILDID
+          echo running docker ps
+          docker ps   
+test-rdd-volumes1:
+  # Test the use of bind mounts with a RDD
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Install docker
+        code: apk --no-cache add docker           
+    - script:
+        name: Start a container with /tmp mounted and create a file
+        code: |
+          cd test-rdd-volumes
+          # Start a container with the host's /tmp directory mounted as /foo
+          # Within that container create a file in /foo
+          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOCREATE=/foo/$BUILDID alpine < script1.sh
+    - script:
+        name: Start a second container with /tmp mounted and verify that it can see that file
+        code: |
+          cd test-rdd-volumes
+          # Start a container with the host's /tmp directory mounted as /foo
+          # Within that container test to see whether the file we created in the other container exists
+          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOTEST=/foo/$BUILDID alpine < script2.sh
+test-rdd-volumes2:
+  # Test the use of volumes with a RDD
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Install docker
+        code: apk --no-cache add docker           
+    - script:
+        name: Create a volume
+        code: |
+          export VOLUME_NAME=vol-$BUILDID
+          docker volume create $VOLUME_NAME
+    - script:
+        name: Create a file locally and use a temporary container to copy it to the volume
+        code: |
+          export FILE_NAME=test-rdd-volumes2-$BUILDID
+          export MOUNT_DIR=/$BUILDID
+          touch $FILE_NAME
+          # create a temporary container with the volume mounted which we will use to perform the copy
+          export CONTAINER1_NAME=temp-test-rdd-volumes2-1-$BUILDID
+          echo docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine
+          docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine
+
+          echo docker cp $FILE_NAME $CONTAINER1_NAME:$MOUNT_DIR
+          docker cp $FILE_NAME $CONTAINER1_NAME:$MOUNT_DIR
+          # delete the temporary container
+          docker rm $CONTAINER1_NAME
+    - script:
+        name: Start a second container with the volume mounted and verify that it can see that file
+        code: |
+          cd test-rdd-volumes
+          # Start a container with the volume mounted as /foo
+          # Within that container test to see whether the file we copied to that volume exists
+          export CONTAINER2_NAME=temp-test-rdd-volumes2-2-$BUILDID
+          docker run --rm --entrypoint sh -i -v $VOLUME_NAME:/foo -e FILENAMETOTEST=/foo/$FILE_NAME alpine < script2.sh          
+    - script:
+        name: Remove the volume
+        code: |
+          docker volume rm vol-$BUILDID  
+test-non-rdd-artifacts1:
+  # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
+  box: alpine:edge
+  steps:    
+    - script:
+        name: Create files and symbolic links in $WERCKER_OUTPUT_DIR (/pipeline/output)
+        code: |
+          #  create a regular file
+          touch $WERCKER_OUTPUT_DIR/outputfile    
+
+          # prepare to create some links
+          if [ -d $WERCKER_OUTPUT_DIR/targets ]; then rm -r $WERCKER_OUTPUT_DIR/targets; fi 
+          mkdir $WERCKER_OUTPUT_DIR/targets
+          if [ -d $WERCKER_OUTPUT_DIR/symlinks ]; then rm -r $WERCKER_OUTPUT_DIR/symlinks; fi 
+          mkdir $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a directory not under $WERCKER_OUTPUT_DIR
+          mkdir /tmp/dir3; touch /tmp/dir3/targetfile1
+          ln -s /tmp/dir3 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a file not under $WERCKER_OUTPUT_DIR
+          mkdir /tmp/dir4; touch /tmp/dir4/file4  
+          ln -s /tmp/dir4/file4 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a directory under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir5; touch $WERCKER_OUTPUT_DIR/targets/dir5/file5
+          ln -s $WERCKER_OUTPUT_DIR/targets/dir5 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a file under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir6; touch $WERCKER_OUTPUT_DIR/targets/dir6/file6
+          ln -s $WERCKER_OUTPUT_DIR/targets/dir6/file6 $WERCKER_OUTPUT_DIR/symlinks
+          # create a relative link to a directory under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir7; touch $WERCKER_OUTPUT_DIR/targets/dir7/file7          
+          ln -s ../targets/dir7 $WERCKER_OUTPUT_DIR/symlinks
+          # create a relative link to a file under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir8; touch $WERCKER_OUTPUT_DIR/targets/dir8/file8    
+          ln -s ../targets/dir8/file8 $WERCKER_OUTPUT_DIR/symlinks
+
+          echo $WERCKER_OUTPUT_DIR/targets
+          ls -l $WERCKER_OUTPUT_DIR/targets
+          echo $WERCKER_OUTPUT_DIR/symlinks
+          ls -l $WERCKER_OUTPUT_DIR/symlinks
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_OUTPUT_DIR (/pipeline/output) - we will repeat this in the next pipeline with $WERCKER_SOURCE_DIR
+        code: |
+          echo $WERCKER_OUTPUT_DIR/targets
+          ls -l $WERCKER_OUTPUT_DIR/targets
+          echo $WERCKER_OUTPUT_DIR/symlinks
+          ls -l $WERCKER_OUTPUT_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_OUTPUT_DIR/outputfile  
+          # verify the absolute link to a directory not under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir3
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir3`            
+          # verify the absolute link to a file not under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file4
+          verify_normal_file `readlink $WERCKER_OUTPUT_DIR/symlinks/file4`
+          # verify the absolute link to a directory under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_OUTPUT_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_OUTPUT_DIR/symlinks/file8`  
+    - script:
+        name: Create files and symbolic links in $WERCKER_CACHE_DIR  (/pipeline/cache)
+        code: |
+          #  create a regular file
+          touch $WERCKER_CACHE_DIR/cachefile    
+
+          # prepare to create some links
+          if [ -d $WERCKER_CACHE_DIR/targets ]; then rm -r $WERCKER_CACHE_DIR/targets; fi 
+          mkdir $WERCKER_CACHE_DIR/targets
+          if [ -d $WERCKER_CACHE_DIR/symlinks ]; then rm -r $WERCKER_CACHE_DIR/symlinks; fi 
+          mkdir $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a directory not under $WERCKER_CACHE_DIR
+          mkdir /tmp/dir1; touch /tmp/dir1/targetfile1
+          ln -s /tmp/dir1 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a file not under $WERCKER_CACHE_DIR
+          mkdir /tmp/dir2; touch /tmp/dir2/file2  
+          ln -s /tmp/dir2/file2 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a directory under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir5; touch $WERCKER_CACHE_DIR/targets/dir5/file5
+          ln -s $WERCKER_CACHE_DIR/targets/dir5 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a file under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir6; touch $WERCKER_CACHE_DIR/targets/dir6/file6
+          ln -s $WERCKER_CACHE_DIR/targets/dir6/file6 $WERCKER_CACHE_DIR/symlinks
+          # create a relative link to a directory under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir7; touch $WERCKER_CACHE_DIR/targets/dir7/file7          
+          ln -s ../targets/dir7 $WERCKER_CACHE_DIR/symlinks
+          # create a relative link to a file under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir8; touch $WERCKER_CACHE_DIR/targets/dir8/file8    
+          ln -s ../targets/dir8/file8 $WERCKER_CACHE_DIR/symlinks
+
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) - we will repeat this in the next pipeline
+        code: |
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_CACHE_DIR/cachefile  
+          # verify the absolute link to a directory not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir1
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir1`            
+          # verify the absolute link to a file not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file2
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file2`
+          # verify the absolute link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                          
+    - script:
+        name: Create a file in $WERCKER_REPORT_ARTIFACTS_DIR  
+        code: |
+          echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
+          touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
+test-non-rdd-artifacts2:
+  # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
+  box: alpine:edge
+  base-path: /a/b/c
+  steps:
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in the previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
+        code: |
+          echo $WERCKER_SOURCE_DIR/targets
+          ls -l $WERCKER_SOURCE_DIR/targets
+          echo $WERCKER_SOURCE_DIR/symlinks
+          ls -l $WERCKER_SOURCE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_SOURCE_DIR/outputfile  
+          # verify the absolute link to a directory not under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir3
+          ##### we expect this link to be broken 
+          ##### verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir3`            
+          # verify the absolute link to a file not under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file4
+          ##### we expect this link to be broken
+          ##### verify_normal_file `readlink $WERCKER_SOURCE_DIR/symlinks/file4`
+          # verify the absolute link to a directory under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir5 
+          ##### we expect this link to be broken because the target is in a different place because this pipeline sets base-path
+          ##### verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file6  
+          ##### we expect this link to be broken because the target is in a different place because this pipeline sets base-path
+          ##### verify_normal_file `readlink $WERCKER_SOURCE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_SOURCE_DIR/symlinks/file8`       
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) in the previous pipeline are present in $WERCKER_CACHE_DIR in this pipeline
+        code: |
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          verify_symlink_unbroken () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_CACHE_DIR/cachefile  
+          # verify the absolute link to a directory not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir1
+          ##### we expect this link to be broken
+          ##### verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir1`            
+          # verify the absolute link to a file not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file2
+          ##### we expect this link to be broken
+          ###### verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file2`
+          # verify the absolute link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                
+test-rdd-artifacts1:
+  # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 1)
+  box: alpine:edge
+  docker: true
+  steps:       
+    - script:
+        name: Create files and symbolic links in $WERCKER_OUTPUT_DIR (/pipeline/output)
+        code: |
+          #  create a regular file
+          touch $WERCKER_OUTPUT_DIR/outputfile    
+
+          # prepare to create some links
+          if [ -d $WERCKER_OUTPUT_DIR/targets ]; then rm -r $WERCKER_OUTPUT_DIR/targets; fi 
+          mkdir $WERCKER_OUTPUT_DIR/targets
+          if [ -d $WERCKER_OUTPUT_DIR/symlinks ]; then rm -r $WERCKER_OUTPUT_DIR/symlinks; fi 
+          mkdir $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a directory not under $WERCKER_OUTPUT_DIR
+          mkdir /tmp/dir3; touch /tmp/dir3/targetfile1
+          ln -s /tmp/dir3 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a file not under $WERCKER_OUTPUT_DIR
+          mkdir /tmp/dir4; touch /tmp/dir4/file4  
+          ln -s /tmp/dir4/file4 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a directory under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir5; touch $WERCKER_OUTPUT_DIR/targets/dir5/file5
+          ln -s $WERCKER_OUTPUT_DIR/targets/dir5 $WERCKER_OUTPUT_DIR/symlinks
+          # create an absolute link to a file under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir6; touch $WERCKER_OUTPUT_DIR/targets/dir6/file6
+          ln -s $WERCKER_OUTPUT_DIR/targets/dir6/file6 $WERCKER_OUTPUT_DIR/symlinks
+          # create a relative link to a directory under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir7; touch $WERCKER_OUTPUT_DIR/targets/dir7/file7          
+          ln -s ../targets/dir7 $WERCKER_OUTPUT_DIR/symlinks
+          # create a relative link to a file under $WERCKER_OUTPUT_DIR
+          mkdir $WERCKER_OUTPUT_DIR/targets/dir8; touch $WERCKER_OUTPUT_DIR/targets/dir8/file8    
+          ln -s ../targets/dir8/file8 $WERCKER_OUTPUT_DIR/symlinks
+
+          echo $WERCKER_OUTPUT_DIR/targets
+          ls -l $WERCKER_OUTPUT_DIR/targets
+          echo $WERCKER_OUTPUT_DIR/symlinks
+          ls -l $WERCKER_OUTPUT_DIR/symlinks   
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_OUTPUT_DIR (/pipeline/output) - we will repeat this in the next pipeline with $WERCKER_SOURCE_DIR
+        code: |
+          echo $WERCKER_OUTPUT_DIR/targets
+          ls -l $WERCKER_OUTPUT_DIR/targets
+          echo $WERCKER_OUTPUT_DIR/symlinks
+          ls -l $WERCKER_OUTPUT_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_OUTPUT_DIR/outputfile  
+          # verify the absolute link to a directory not under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir3
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir3`            
+          # verify the absolute link to a file not under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file4
+          verify_normal_file `readlink $WERCKER_OUTPUT_DIR/symlinks/file4`
+          # verify the absolute link to a directory under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_OUTPUT_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_OUTPUT_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_OUTPUT_DIR
+          verify_symlink $WERCKER_OUTPUT_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_OUTPUT_DIR/symlinks/file8`        
+    - script:
+        name: Create files and symbolic links in $WERCKER_CACHE_DIR  (/pipeline/cache)
+        code: |
+          #  create a regular file
+          touch $WERCKER_CACHE_DIR/cachefile    
+
+          # prepare to create some links
+          if [ -d $WERCKER_CACHE_DIR/targets ]; then rm -r $WERCKER_CACHE_DIR/targets; fi 
+          mkdir $WERCKER_CACHE_DIR/targets
+          if [ -d $WERCKER_CACHE_DIR/symlinks ]; then rm -r $WERCKER_CACHE_DIR/symlinks; fi 
+          mkdir $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a directory not under $WERCKER_CACHE_DIR
+          mkdir /tmp/dir1; touch /tmp/dir1/targetfile1
+          ln -s /tmp/dir1 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a file not under $WERCKER_CACHE_DIR
+          mkdir /tmp/dir2; touch /tmp/dir2/file2  
+          ln -s /tmp/dir2/file2 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a directory under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir5; touch $WERCKER_CACHE_DIR/targets/dir5/file5
+          ln -s $WERCKER_CACHE_DIR/targets/dir5 $WERCKER_CACHE_DIR/symlinks
+          # create an absolute link to a file under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir6; touch $WERCKER_CACHE_DIR/targets/dir6/file6
+          ln -s $WERCKER_CACHE_DIR/targets/dir6/file6 $WERCKER_CACHE_DIR/symlinks
+          # create a relative link to a directory under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir7; touch $WERCKER_CACHE_DIR/targets/dir7/file7          
+          ln -s ../targets/dir7 $WERCKER_CACHE_DIR/symlinks
+          # create a relative link to a file under $WERCKER_CACHE_DIR
+          mkdir $WERCKER_CACHE_DIR/targets/dir8; touch $WERCKER_CACHE_DIR/targets/dir8/file8    
+          ln -s ../targets/dir8/file8 $WERCKER_CACHE_DIR/symlinks
+
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) - we will repeat this in the next pipeline
+        code: |
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_CACHE_DIR/cachefile  
+          # verify the absolute link to a directory not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir1
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir1`            
+          # verify the absolute link to a file not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file2
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file2`
+          # verify the absolute link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                                   
+    - script:
+        name: Create a file in $WERCKER_REPORT_ARTIFACTS_DIR  
+        code: |
+          echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
+          touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
+test-rdd-artifacts2:
+  # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 2)
+  box: alpine:edge
+  base-path: /a/b/c
+  docker: true
+  steps:
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in the previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
+        code: |
+          echo $WERCKER_SOURCE_DIR/targets
+          ls -l $WERCKER_SOURCE_DIR/targets
+          echo $WERCKER_SOURCE_DIR/symlinks
+          ls -l $WERCKER_SOURCE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_SOURCE_DIR/outputfile  
+          # verify the absolute link to a directory not under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir3
+          ##### we expect this link to be broken 
+          ##### verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir3`            
+          # verify the absolute link to a file not under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file4
+          ##### we expect this link to be broken
+          ##### verify_normal_file `readlink $WERCKER_SOURCE_DIR/symlinks/file4`
+          # verify the absolute link to a directory under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir5 
+          ##### we expect this link to be broken because the target is in a different place because this pipeline sets base-path
+          ##### verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file6  
+          ##### we expect this link to be broken because the target is in a different place because this pipeline sets base-path
+          ##### verify_normal_file `readlink $WERCKER_SOURCE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_SOURCE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_SOURCE_DIR
+          verify_symlink $WERCKER_SOURCE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_SOURCE_DIR/symlinks/file8`    
+    - script:
+        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) in the previous pipeline are present in $WERCKER_CACHE_DIR in this pipeline
+        code: |
+          echo $WERCKER_CACHE_DIR/targets
+          ls -l $WERCKER_CACHE_DIR/targets
+          echo $WERCKER_CACHE_DIR/symlinks
+          ls -l $WERCKER_CACHE_DIR/symlinks
+ 
+          verify_directory () { if [ ! -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, is not a directory, or is a symbolic link."; exit 1; fi }
+          verify_normal_file () { if [ ! -f $1 ] || [ -d $1 ] || [ -h $1 ] ; then echo "$1 does not exist, or is a directory, or is a symbolic link"; exit 1; fi }
+          verify_symlink () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          verify_symlink_unbroken () { if [ ! -h $1 ]; then echo "$1 does not exist or is not a symbolic link"; exit 1; fi }
+          #  verify the normal file 
+          verify_normal_file $WERCKER_CACHE_DIR/cachefile  
+          # verify the absolute link to a directory not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir1
+          ##### we expect this link to be broken
+          ##### verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir1`            
+          # verify the absolute link to a file not under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file2
+          ##### we expect this link to be broken
+          ###### verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file2`
+          # verify the absolute link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir5 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir5`  
+          # verify the absolute link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file6  
+          verify_normal_file `readlink $WERCKER_CACHE_DIR/symlinks/file6`
+          # verify the relative link to a directory under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/dir7 
+          verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
+          # verify the relative link to a file under $WERCKER_CACHE_DIR
+          verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                 
+test-fn1:
+  # Simple Fn use case in which we start the fn server (using docker in docker) and build, deploy and call a function
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Install wget
+        code: apk --no-cache add wget    
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl     
+    - script:
+        name: Install docker CLI (needed by Fn)
+        code: apk --no-cache add docker    
+    - script:
+        name: Start fn server (using DinD)
+        code: |
+          docker ps
+          docker run --privileged -d --rm --name functions --network=$DOCKER_NETWORK_NAME -v $PWD/data:/app/data -p 8080:8080 fnproject/fnserver 
+          # need to allow time for the fn server to start - the next step is slow which should give it enough time
+    - script:
+        name: Install fn CLI (do this once for all the fn pipelines)
+        code: |
+          mkdir $WERCKER_ROOT/fn
+          cd $WERCKER_ROOT/fn
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine  # need to replace with a URI to the latest version
+          mv fn_alpine fn
+          chmod a+x $WERCKER_ROOT/fn/fn 
+          export PATH=$WERCKER_ROOT/fn:$PATH
+          fn --version
+    - script: 
+        name: Login to Docker Hub (so we can deploy the function to it)
+        code: docker login -u $USERNAME -p $PASSWORD
+    - script:
+        name: Build and deploy function to Docker Hub
+        code: |
+          #
+          echo $DOCKER_HOST
+          docker ps --no-trunc
+          sleep 5
+          echo Trying to contact fn server
+          docker ps
+          ping -c 3 functions
+          curl functions:8080
+          #
+          cd $WERCKER_ROOT/test-fn1
+          export FN_REGISTRY=docker.io/$USERNAME
+          export FN_API_URL=http://functions:8080
+          fn deploy --app myapp 
+    - script:
+        name: List deployed functions
+        code: |
+          fn list routes myapp
+    - script:
+        name: Invoke the function and verify it returns the expected result
+        code: |
+            if curlOutput=`curl -s functions:8080/r/myapp/test-fn1`; then 
+                export expected='{"message":"Hello World"}'
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: function gave expected response: " $expected
+                else
+                    echo "Test failed: function gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: function did not respond"
+                exit 1
+            fi   
+  after-steps:
+    - script:
+        name: Clean up
+        code: |
+          # kill fn server (don't fail if there isn't one)
+          docker kill functions 2> /dev/null | true                   
+test-fn2:
+  # Simple Fn use case in which we start the fn server (using the local docker rather than docker in docker) and build, deploy and call a function
+  box: alpine:edge
+  docker: true
+  steps:
+    - script:
+        name: Install wget
+        code: apk --no-cache add wget    
+    - script:
+        name: Install Curl
+        code: apk --no-cache add curl     
+    - script:
+        name: Install docker CLI (needed by Fn)
+        code: apk --no-cache add docker    
+    - script:
+        name: Start fn server (using local docker, not using DinD)
+        code: |
+          docker ps
+          docker run -d --rm --name functions --network=$DOCKER_NETWORK_NAME -e FN_DOCKER_NETWORKS=$DOCKER_NETWORK_NAME -v /var/run/docker.sock:/var/run/docker.sock -v $PWD/data:/app/data -p 8080:8080 fnproject/fnserver 
+          # need to allow time for the fn server to start - the next step is slow which should give it enough time
+    - script:
+        name: Install fn CLI 
+        code: |
+          mkdir $WERCKER_ROOT/fn
+          cd $WERCKER_ROOT/fn
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine  # need to replace with a URI to the latest version
+          mv fn_alpine fn
+          chmod a+x $WERCKER_ROOT/fn/fn 
+          export PATH=$WERCKER_ROOT/fn:$PATH
+          fn --version
+    - script: 
+        name: Login to Docker Hub (so we can deploy the function to it)
+        code: docker login -u $USERNAME -p $PASSWORD
+    - script:
+        name: Build and deploy function to Docker Hub
+        code: |
+          #
+          echo $DOCKER_HOST
+          docker ps --no-trunc
+          sleep 5
+          echo Trying to contact fn server
+          docker ps
+          ping -c 3 functions
+          curl functions:8080
+          #
+          cd $WERCKER_ROOT/test-fn2
+          export FN_REGISTRY=docker.io/$USERNAME
+          export FN_API_URL=http://functions:8080
+          fn deploy --app myapp 
+    - script:
+        name: List deployed functions
+        code: |
+          fn list routes myapp
+    - script:
+        name: Invoke the function and verify it returns the expected result
+        code: |
+            if curlOutput=`curl -s functions:8080/r/myapp/test-fn2`; then 
+                export expected='{"message":"Hello World"}'
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: function gave expected response: " $expected
+                else
+                    echo "Test failed: function gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: function did not respond"
+                exit 1
+            fi   
+  after-steps:
+    - script:
+        name: Clean up
+        code: |
+          # kill fn server (don't fail if there isn't one)
+          docker kill functions 2> /dev/null | true

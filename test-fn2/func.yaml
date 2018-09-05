@@ -1,0 +1,4 @@
+name: hello.go
+version: 0.0.15
+runtime: go
+entrypoint: ./func
