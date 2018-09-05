@@ -150,7 +150,7 @@ test-docker-build1:
         username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
         password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
-        tag: latest #test-docker-build       
+        tag: test-docker-build       
 test-docker-build2:
   # Test the docker-build step (part 2)
   # Test that we can pull the newly-created image, start it as a service, and connect to it
