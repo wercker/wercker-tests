@@ -2,9 +2,9 @@
 
 This repository defines a number of wercker pipelines that test various aspects of wercker.
 
-See the [latest runs on app.wercker.com](https://app.wercker.com/nigeldeakin/wercker-tests/runs)
+See the [latest runs on app.wercker.com](https://app.wercker.com/wercker/wercker-tests/runs)
 
-See the [latest runs on dev.wercker.com](https://dev.wercker.com/nigeldeakin/wercker-tests/runs)
+See the [latest runs on dev.wercker.com](https://dev.wercker.com/wercker/wercker-tests/runs)
 
 The table below lists the pipelines and how they should be connected in a workflow:
 
