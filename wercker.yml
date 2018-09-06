@@ -75,20 +75,17 @@ build:
           export BUILDID=`cat /pipeline/output/build-id`
           echo BUILDID=$BUILDID
     - script:    
-        name: Check environment variables
+        name: Check USERNAME and PROD_OR_STAGING variables
+        # We expect PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
         code: |
           if [[ -z "$USERNAME" ]]; then
             echo Environment variable \$USERNAME is not set
             return 1
           fi   
-          if [[ -z "$PASSWORD" ]]; then
-            echo Environment variable \$PASSWORD is not set
-            return 1
-          fi  
           if [[ -z "$PROD_OR_STAGING" ]]; then
             echo Environment variable \$PROD_OR_STAGING is not set
             return 1
-          fi      
+          fi   
     - script:
         name: Edit source to add build ID
         # this is so we can be sure that we are testing the right version of our images
