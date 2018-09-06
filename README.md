@@ -41,11 +41,16 @@ wercker workflow tests
 
 # Adding a new test pipeline
 
-If you add a new pipeline to `wercker.yml`:
-* Update the workflow using the UI:
-  * Your new pipeline should be dependent on the `build` pipeline
-  * Your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
+If you add a new pipeline to `wercker.yml` then before creating a PR and merging your changes you should
 * Update the workflow in `wercker.yml` (so that it will get run if someone does `wercker workflow tests`):
   * Your new pipeline should be dependent on the `build` pipeline
   * No need to run the `all-tests-passed` pipeline
 * Add your new pipeline to the summary table above 
+* Test your new pipeline by running it locally (including `wercker workflow tests`)
+
+After your PR has been approved and merged you can then add it to the automated build:
+
+* Update the workflow using the UI:
+  * Your new pipeline should be dependent on the `build` pipeline
+  * Your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
+  * Manually trigger a build to verify that your new pipeline works. If it fails then remove it from the workflow and fix it.
