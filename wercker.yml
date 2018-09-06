@@ -75,15 +75,12 @@ build:
           export BUILDID=`cat /pipeline/output/build-id`
           echo BUILDID=$BUILDID
     - script:    
-        name: Check USERNAME and PROD_OR_STAGING variables
-        # We expect PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
+        name: Check USERNAME variable
+        # We also require PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
+        # User can also optionally set PROD_OR_STAGING
         code: |
           if [[ -z "$USERNAME" ]]; then
             echo Environment variable \$USERNAME is not set
-            return 1
-          fi   
-          if [[ -z "$PROD_OR_STAGING" ]]; then
-            echo Environment variable \$PROD_OR_STAGING is not set
             return 1
           fi   
     - script:
@@ -1097,3 +1094,11 @@ test-fn2:
         code: |
           # kill fn server (don't fail if there isn't one)
           docker kill functions 2> /dev/null | true
+
+all-tests-passed:
+  # This pipeline is dependent on all tests passing and is configured to report to SCM that the tests have passed
+  box: alpine
+  steps:
+    - script:
+        name: Dummy step
+        code: echo Dummy step  
