@@ -50,13 +50,18 @@ If you add a new pipeline to `wercker.yml` then before creating a PR and merging
 
 After your PR has been approved and merged you can then add it to the automated build:
 
-* Update the workflow using the UI:
-  * Your new pipeline should be dependent on the `build` pipeline
-  * Manually trigger a build to verify that your new pipeline works. 
+* Update the workflow using the UI: your new pipeline should be dependent on the `build` pipeline
+  
+* Manually trigger a build to verify that your new pipeline works. 
   
 After you have confirmed that your new pipeline passes 
 
-* Further update the workflow using the UI:
-  * Update your new pipeline to follow it with a fan-in to the `all-tests-passed` pipeline
+* Further update the workflow using the UI: your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
+
+Since this means that your new pipeline will not be tested in a hosted environment until after your PR has been merged
+it is probably best to create an empty pipeline initially and go through the process above to add it to the workflow.
+Then create a new feature branch and start making changes to your pipeline. Each time you push changes to your feature branch
+the entire workflow, including your updated pipeline, will be run in hosted wercker.
+
 
 
