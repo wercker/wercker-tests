@@ -1,11 +1,13 @@
 # wercker-tests
-A  repository for testing pipelines in wercker
- 
-To run these tests:
 
-Fork this repository and add it as an application in Wercker. 
+This repository defines a number of wercker pipelines that test various aspects of wercker.
 
-Configure the new application to run the following workflow:
+See the [latest runs on app.wercker.com](https://app.wercker.com/nigeldeakin/wercker-tests/runs)
+
+See the [latest runs on dev.wercker.com](https://dev.wercker.com/nigeldeakin/wercker-tests/runs)
+
+The table below lists the pipelines and how they should be connected in a workflow:
+
 ```
 build --> test-docker-build1        --> test-docker-build2         Tests internal/docker-build
           test-docker-push-classic1 --> test-docker-push-classic2  Tests internal/docker-push (committing and pushing pipeline container)
@@ -18,26 +20,21 @@ build --> test-docker-build1        --> test-docker-build2         Tests interna
           test-rdd-volumes1                                        Test the use of bind mounts with a RDD
           test-rdd-volumes2                                        Test the use of volumes with a RDD
 ```
-Configure your application with the following environment variables 
-* `USERNAME` - Your Docker Hub username
-* `PASSWORD` - Your Docker Hub password
+
+The following environment variables must be set:
+* `USERNAME` - Any docker Hub username
+* `PASSWORD` - Any docker Hub password
 * `PROD_OR_STAGING` (Optional) - A string used to distinguish between any workflows that might be run concurrently using the same username. This is appended to any image tags that are created in order to avoid name clashes on Docker Hub. Use lower case characters only. 
-
-Then run the `build` pipeline,  either manually (easier) or by making a token edit to your clone of this repo and pushing it.
-
-See the [latest runs on app.wercker.com](https://app.wercker.com/nigeldeakin/wercker-tests/runs)
-
-See the [latest runs on dev.wercker.com](https://dev.wercker.com/nigeldeakin/wercker-tests/runs)
 
 ## Running these tests locally
 
-To run these tests locally using the wercker CLI, set 
+You can run these tests locally using the Wercker CLI. To do this, clone this repository and set the following environment variables (see abive for a description of each):
 ```
 export X_USERNAME=<username>
 export X_PASSWORD=<password>
 export X_PROD_OR_STAGING=dev
 ```
-and then run
+then navigate to the root directory of your cloned repository and run
 ```
 wercker workflow tests
 ```
