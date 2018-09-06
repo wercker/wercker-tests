@@ -2,9 +2,9 @@
 
 This repository defines a number of wercker pipelines that test various aspects of wercker.
 
-See the [latest runs on app.wercker.com](https://app.wercker.com/nigeldeakin/wercker-tests/runs)
+See the [latest runs on app.wercker.com](https://app.wercker.com/wercker/wercker-tests/runs)
 
-See the [latest runs on dev.wercker.com](https://dev.wercker.com/nigeldeakin/wercker-tests/runs)
+See the [latest runs on dev.wercker.com](https://dev.wercker.com/wercker/wercker-tests/runs)
 
 The table below lists the pipelines and how they should be connected in a workflow:
 
@@ -28,7 +28,7 @@ The following environment variables must be set:
 
 ## Running these tests locally
 
-You can run these tests locally using the Wercker CLI. To do this, clone this repository and set the following environment variables (see abive for a description of each):
+You can run these tests locally using the Wercker CLI. To do this, clone this repository and set the following environment variables (see above for a description of each):
 ```
 export X_USERNAME=<username>
 export X_PASSWORD=<password>
@@ -38,3 +38,29 @@ then navigate to the root directory of your cloned repository and run
 ```
 wercker workflow tests
 ```
+
+# Adding a new test pipeline
+
+If you add a new pipeline to `wercker.yml` then before creating a PR and merging your changes you should
+* Update the workflow in `wercker.yml` (so that it will get run if someone does `wercker workflow tests`):
+  * Your new pipeline should be dependent on the `build` pipeline
+  * No need to follow it with a fan-in the `all-tests-passed` pipeline
+* Add your new pipeline to the summary table above 
+* Test your new pipeline by running it locally (including `wercker workflow tests`)
+
+After your PR has been approved and merged you can then add it to the automated build:
+
+* Update the workflow using the UI: your new pipeline should be dependent on the `build` pipeline
+* Manually trigger a build to verify that your new pipeline works. 
+  
+After you have confirmed that your new pipeline passes 
+
+* Further update the workflow using the UI: your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
+
+Since this means that your new pipeline will not be tested in a hosted environment until after your PR has been merged
+it is probably best to create an empty pipeline initially and go through the process above to add it to the workflow.
+Then create a new feature branch and start making changes to your pipeline. Each time you push changes to your feature branch
+the entire workflow, including your updated pipeline, will be run in hosted wercker.
+
+
+
