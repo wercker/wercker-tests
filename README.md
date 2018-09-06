@@ -51,7 +51,6 @@ If you add a new pipeline to `wercker.yml` then before creating a PR and merging
 After your PR has been approved and merged you can then add it to the automated build:
 
 * Update the workflow using the UI: your new pipeline should be dependent on the `build` pipeline
-  
 * Manually trigger a build to verify that your new pipeline works. 
   
 After you have confirmed that your new pipeline passes 
