@@ -38,3 +38,14 @@ then navigate to the root directory of your cloned repository and run
 ```
 wercker workflow tests
 ```
+
+# Adding a new test pipeline
+
+If you add a new pipeline to `wercker.yml`:
+* Update the workflow using the UI:
+  * Your new pipeline should be dependent on the `build` pipeline
+  * Your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
+* Update the workflow in `wercker.yml` (so that it will get run if someone does `wercker workflow tests`):
+  * Your new pipeline should be dependent on the `build` pipeline
+  * No need to run the `all-tests-passed` pipeline
+* Add your new pipeline to the summary table above 
