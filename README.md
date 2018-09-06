@@ -21,7 +21,7 @@ build --> test-docker-build1        --> test-docker-build2         Tests interna
 Configure your application with the following environment variables 
 * `USERNAME` - Your Docker Hub username
 * `PASSWORD` - Your Docker Hub password
-* `PROD_OR_STAGING` - A string used to distinguish between any workflows that might be run concurrently. Use lower case characters only.
+* `PROD_OR_STAGING` (Optional) - A string used to distinguish between any workflows that might be run concurrently using the same username. This is appended to any image tags that are created in order to avoid name clashes on Docker Hub. Use lower case characters only. 
 
 Then run the `build` pipeline,  either manually (easier) or by making a token edit to your clone of this repo and pushing it.
 
