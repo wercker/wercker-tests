@@ -28,7 +28,7 @@ The following environment variables must be set:
 
 ## Running these tests locally
 
-You can run these tests locally using the Wercker CLI. To do this, clone this repository and set the following environment variables (see abive for a description of each):
+You can run these tests locally using the Wercker CLI. To do this, clone this repository and set the following environment variables (see above for a description of each):
 ```
 export X_USERNAME=<username>
 export X_PASSWORD=<password>
@@ -44,7 +44,7 @@ wercker workflow tests
 If you add a new pipeline to `wercker.yml` then before creating a PR and merging your changes you should
 * Update the workflow in `wercker.yml` (so that it will get run if someone does `wercker workflow tests`):
   * Your new pipeline should be dependent on the `build` pipeline
-  * No need to run the `all-tests-passed` pipeline
+  * No need to follow it with a fan-in the `all-tests-passed` pipeline
 * Add your new pipeline to the summary table above 
 * Test your new pipeline by running it locally (including `wercker workflow tests`)
 
@@ -52,5 +52,11 @@ After your PR has been approved and merged you can then add it to the automated 
 
 * Update the workflow using the UI:
   * Your new pipeline should be dependent on the `build` pipeline
-  * Your new pipeline should be followed by a fan-in to the `all-tests-passed` pipeline
-  * Manually trigger a build to verify that your new pipeline works. If it fails then remove it from the workflow and fix it.
+  * Manually trigger a build to verify that your new pipeline works. 
+  
+After you have confirmed that your new pipeline passes 
+
+* Further update the workflow using the UI:
+  * Update your new pipeline to follow it with a fan-in to the `all-tests-passed` pipeline
+
+
