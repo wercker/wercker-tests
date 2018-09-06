@@ -837,7 +837,7 @@ test-rdd-artifacts1:
           echo $WERCKER_CACHE_DIR/symlinks
           ls -l $WERCKER_CACHE_DIR/symlinks
     - script:
-        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) - we will repeat this in the next pipeline
+        name: Verify files and links we added to WERCKER_CACHE_DIR (/pipeline/cache) - we will repeat this in the next pipeline
         code: |
           echo $WERCKER_CACHE_DIR/targets
           ls -l $WERCKER_CACHE_DIR/targets
@@ -879,7 +879,7 @@ test-rdd-artifacts2:
   docker: true
   steps:
     - script:
-        name: Verify the files and symbolic links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in the previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
+        name: Verify files and links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in the previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
         code: |
           echo $WERCKER_SOURCE_DIR/targets
           ls -l $WERCKER_SOURCE_DIR/targets
@@ -914,7 +914,7 @@ test-rdd-artifacts2:
           verify_symlink $WERCKER_SOURCE_DIR/symlinks/file8 
           verify_normal_file `readlink -f $WERCKER_SOURCE_DIR/symlinks/file8`    
     - script:
-        name: Verify the files and symbolic links we added to WERCKER_CACHE_DIR (/pipeline/cache) in the previous pipeline are present in $WERCKER_CACHE_DIR in this pipeline
+        name: Verify files and links we added to WERCKER_CACHE_DIR (/pipeline/cache) in the previous pipeline are present in $WERCKER_CACHE_DIR in this pipeline
         code: |
           echo $WERCKER_CACHE_DIR/targets
           ls -l $WERCKER_CACHE_DIR/targets
