@@ -1104,16 +1104,17 @@ all-tests-passed:
         code: echo Dummy step
 
 # Deploy a cronjob to run these tests at a defined interval
-# deploy-kube requires the following environment variables to be set (some are used in deployment/cronjob.template.yml)
-# SCHEDULE - Cronjob schedule, for example 5 * * * *
+# deploy-kube requires the following environment variables to be set 
 # KUBERNETES_MASTER - Kubernetes master, of the form http://host:port
 # KUBERNETES_TOKEN - Token of a Kubernetes user that is allowed to deploy to Kubernetes 
-# WERCKER_TOKEN - Token of a Wercker user that is allowed to run the wercker-tests workflow
-# PIPELINE - Initial pipeline of the wercker-tests workflow
-# ENDPOINT- URL of API endpoint used to trigger a run of wercker-tests, for example https://dev.wercker.com/api/v3/runs 
-# MESSAGE - Comment string associated with the run. A timestamp will be appended to it.
+# (Env vars starting TPL_ are used in deployment/cronjob.template.yml)
+# TPL_SCHEDULE - Cronjob schedule, for example 5 * * * *
+# TPL_WERCKER_TOKEN - Token of a Wercker user that is allowed to run the wercker-tests workflow
+# TPL_PIPELINE - Initial pipeline of the wercker-tests workflow
+# TPL_ENDPOINT- URL of API endpoint used to trigger a run of wercker-tests, for example https://dev.wercker.com/api/v3/runs 
+# TPL_MESSAGE - Comment string associated with the run. A timestamp will be appended to it.
 # TPL_SUSPEND_JOB (optional) - Set to true to suspend further executions of the cronjob
-# NODE_SELECTOR (optional) - Set to a valid node selector, for example caste: patrician
+# TPL_NODE_SELECTOR (optional) - Set to a valid node selector, for example caste: patrician
 deploy-kube:
   box: alpine
   steps:
