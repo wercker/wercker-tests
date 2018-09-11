@@ -1105,6 +1105,7 @@ all-tests-passed:
 
 # Deploy a cronjob to run these tests at a defined interval
 # deploy-kube requires the following environment variables to be set (some are used in deployment/cronjob.template.yml)
+# SCHEDULE - Cronjob schedule, for example 5 * * * *
 # KUBERNETES_MASTER - Kubernetes master, of the form http://host:port
 # KUBERNETES_TOKEN - Token of a Kubernetes user that is allowed to deploy to Kubernetes 
 # WERCKER_TOKEN - Token of a Wercker user that is allowed to run the wercker-tests workflow

@@ -4,7 +4,7 @@ kind: CronJob
 metadata:
   name: werckertests
 spec:
-  schedule: "*/1 * * * *" # minutely
+  schedule: "${SCHEDULE}" 
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
