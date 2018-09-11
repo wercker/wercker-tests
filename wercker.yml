@@ -1100,17 +1100,8 @@ all-tests-passed:
   box: alpine
   steps:
     - script:
-        name: Did the test pass?
-        code: |
-          echo WERCKER_RESULT=$WERCKER_RESULT
-          echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
-          echo WERCKER_FAILED_STEP_MESSAGE=$WERCKER_FAILED_STEP_MESSAGE
-  after-steps:
-    - slack-notifier:
-       url: $SLACK_URL
-       channel: #wercker-wercker-tests
-       username: werckerbot
-#       notify_on: "failed"
+        name: Dummy step
+        code: echo Dummy step
 
 # Deploy a cronjob to run these tests at a defined interval
 # deploy-kube requires the following environment variables to be set 
