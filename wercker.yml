@@ -1111,7 +1111,7 @@ all-tests-passed:
 # WERCKER_TOKEN - Token of a Wercker user that is allowed to run the wercker-tests workflow
 # PIPELINE - Initial pipeline of the wercker-tests workflow
 # ENDPOINT- URL of API endpoint used to trigger a run of wercker-tests, for example https://dev.wercker.com/api/v3/runs 
-# MESSAGE - Comment string associated with the run. A timestamp will be appended.
+# MESSAGE - Comment string associated with the run. A timestamp will be appended to it.
 # TPL_SUSPEND_JOB (optional) - Set to true to suspend further executions of the cronjob
 # NODE_SELECTOR (optional) - Set to a valid node selector, for example caste: patrician
 deploy-kube:
