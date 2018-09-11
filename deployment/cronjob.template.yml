@@ -1,0 +1,38 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: wercker-tests
+spec:
+  schedule: "${TPL_SCHEDULE}" 
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 10
+  suspend: ${TPL_SUSPEND_JOB:-false}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: wercker-tests
+        spec:
+          nodeSelector:
+            ${TPL_NODE_SELECTOR}
+          containers:
+          - name: werckertest-runner
+            image: alpine
+            args:
+            - /bin/sh
+            - -c
+            - |
+              apk --no-cache add curl
+              curl -H 'Authorization: Bearer ${TPL_WERCKER_TOKEN}' -H 'Content-Type: application/json' -d '{"pipelineId":"${TPL_PIPELINE}","message":"${TPL_MESSAGE} (`date -u`)"}' ${TPL_ENDPOINT}
+            resources:
+              requests:
+                cpu: 50m
+                memory: 25Mi
+              limits:
+                cpu: 500m
+                memory: 500Mi
+          restartPolicy: Never
