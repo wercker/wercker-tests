@@ -1101,7 +1101,7 @@ all-tests-passed:
   steps:
     - script:
         name: Dummy step
-        code: echo Dummy step  
+        code: echo Dummy step
 
 # Deploy a cronjob to run these tests at a defined interval
 # deploy-kube requires the following environment variables to be set (some are used in deployment/cronjob.template.yml)
