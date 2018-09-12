@@ -21,6 +21,8 @@ build --> test-docker-build1        --> test-docker-build2         Tests interna
           test-rdd-volumes2                                        Test the use of volumes with a RDD
 ```
 
+Each of the above sequences is followed by a fan-in to the `all-tests-passed` pipeline.
+
 The following environment variables must be set:
 * `USERNAME` - Any docker Hub username
 * `PASSWORD` - Any docker Hub password
