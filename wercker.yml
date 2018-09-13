@@ -112,7 +112,8 @@ build:
           echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
     - nigeldeakin/pagerduty-notifier@1.0.7:
         service_key: $PAGERDUTY_SERVICE_KEY
-        description: PLEASE IGNORE. This is a test by nigel.deakin@oracle.com.
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        description: $DESCRIPTION
 
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
