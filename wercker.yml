@@ -111,7 +111,7 @@ build:
           echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
           echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
     - nigeldeakin/pagerduty-notifier@1.0.7:
-        service-key: $PAGERDUTY_SERVICE_KEY
+        service_key: $PAGERDUTY_SERVICE_KEY
         description: PLEASE IGNORE. This is a test by nigel.deakin@oracle.com.
 
 test-docker-build1:
