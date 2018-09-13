@@ -74,6 +74,7 @@ build:
           echo `date +%s%N`-${PROD_OR_STAGING} > /pipeline/output/build-id
           export BUILDID=`cat /pipeline/output/build-id`
           echo BUILDID=$BUILDID
+          exit 1
     - script:    
         name: Check USERNAME variable
         # We also require PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
@@ -109,7 +110,6 @@ build:
           echo WERCKER_RESULT=$WERCKER_RESULT
           echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
           echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
-          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
           echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
     - nigeldeakin/pagerduty-notifier@1.0.0:
         service-key: wombatkey
@@ -175,7 +175,6 @@ test-docker-build1:
           echo WERCKER_RESULT=$WERCKER_RESULT
           echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
           echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
-          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
           echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME     
 test-docker-build2:
   # Test the docker-build step (part 2)
