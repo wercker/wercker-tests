@@ -110,7 +110,7 @@ build:
           echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
           echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
           echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
-    - nigeldeakin/pagerduty-notifier@1.0.6:
+    - nigeldeakin/pagerduty-notifier@1.0.7:
         service-key: wombatkey
 
 test-docker-build1:
