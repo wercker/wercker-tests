@@ -97,6 +97,20 @@ build:
         code: |
           go test ./...     
   after-steps:
+    - script: 
+        name: Display some env vars
+        code: |    
+          echo DEPLOY=$DEPLOY
+          echo WERCKER_DEPLOYTARGET_NAME=$WERCKER_DEPLOYTARGET_NAME
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
+          echo WERCKER_APPLICATION_NAME=$WERCKER_APPLICATION_NAME
+          echo WERCKER_STARTED_BY=$WERCKER_STARTED_BY
+          echo WERCKER_RESULT=$WERCKER_RESULT
+          echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
+          echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME
     - nigeldeakin/pagerduty-notifier@1.0.0:
         service-key: wombatkey
 
@@ -147,7 +161,22 @@ test-docker-build1:
         username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
         password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
-        tag: test-docker-build       
+        tag: test-docker-build  
+  after-steps:
+    - script: 
+        name: Display some env vars
+        code: |    
+          echo DEPLOY=$DEPLOY
+          echo WERCKER_DEPLOYTARGET_NAME=$WERCKER_DEPLOYTARGET_NAME
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
+          echo WERCKER_APPLICATION_NAME=$WERCKER_APPLICATION_NAME
+          echo WERCKER_STARTED_BY=$WERCKER_STARTED_BY
+          echo WERCKER_RESULT=$WERCKER_RESULT
+          echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
+          echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME     
 test-docker-build2:
   # Test the docker-build step (part 2)
   # Test that we can pull the newly-created image, start it as a service, and connect to it
