@@ -96,6 +96,8 @@ build:
         name: Run the unit tests
         code: |
           go test ./...     
+    - nigeldeakin/pagerduty-notifier@1.0.0:
+        service-key: wombatkey
 
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
