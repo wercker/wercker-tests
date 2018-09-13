@@ -161,9 +161,22 @@ test-docker-build1:
         password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
         tag: test-docker-build  
-  after-steps:
     - script: 
         name: Display some env vars
+        code: |    
+          echo DEPLOY=$DEPLOY
+          echo WERCKER_DEPLOYTARGET_NAME=$WERCKER_DEPLOYTARGET_NAME
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
+          echo WERCKER_APPLICATION_NAME=$WERCKER_APPLICATION_NAME
+          echo WERCKER_STARTED_BY=$WERCKER_STARTED_BY
+          echo WERCKER_RESULT=$WERCKER_RESULT
+          echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
+          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
+          echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME    
+  after-steps:
+    - script: 
+        name: After-step to display some env vars
         code: |    
           echo DEPLOY=$DEPLOY
           echo WERCKER_DEPLOYTARGET_NAME=$WERCKER_DEPLOYTARGET_NAME
