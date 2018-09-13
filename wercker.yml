@@ -74,7 +74,6 @@ build:
           echo `date +%s%N`-${PROD_OR_STAGING} > /pipeline/output/build-id
           export BUILDID=`cat /pipeline/output/build-id`
           echo BUILDID=$BUILDID
-          exit 1
     - script:    
         name: Check USERNAME variable
         # We also require PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
