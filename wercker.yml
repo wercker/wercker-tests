@@ -96,6 +96,7 @@ build:
         name: Run the unit tests
         code: |
           go test ./...     
+  after-steps:
     - nigeldeakin/pagerduty-notifier@1.0.0:
         service-key: wombatkey
 
