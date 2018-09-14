@@ -95,7 +95,9 @@ build:
     - script: 
         name: Run the unit tests
         code: |
-          go test ./...     
+          go test ./...   
+          ### fail!!!
+          exit 1                
   after-steps:
     - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
@@ -141,9 +143,7 @@ test-docker-build1:
             else 
                 echo "Test failed: container did not respond"
                 exit 1
-            fi   
-            ### fail!!!
-            exit 1        
+            fi      
     - internal/docker-kill:
         name: myTestContainer           
     - internal/docker-push:    
