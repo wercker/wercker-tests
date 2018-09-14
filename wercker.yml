@@ -100,8 +100,8 @@ build:
     - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
-        description: $DESCRIPTION
-
+        description: $PAGERDUTY_DESCRIPTION
+        branch: $PAGERDUTY_BRANCH
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
   box: alpine:edge
@@ -150,24 +150,12 @@ test-docker-build1:
         password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
         tag: test-docker-build  
+  after-steps:
     - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
-        description: $DESCRIPTION
-  after-steps:
-    - script: 
-        name: After-step to display some env vars
-        code: |    
-          echo DEPLOY=$DEPLOY
-          echo WERCKER_DEPLOYTARGET_NAME=$WERCKER_DEPLOYTARGET_NAME
-          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
-          echo WERCKER_BUILD_URL=$WERCKER_BUILD_URL
-          echo WERCKER_APPLICATION_NAME=$WERCKER_APPLICATION_NAME
-          echo WERCKER_STARTED_BY=$WERCKER_STARTED_BY
-          echo WERCKER_RESULT=$WERCKER_RESULT
-          echo WERCKER_GIT_BRANCH=$WERCKER_GIT_BRANCH
-          echo WERCKER_DEPLOY_URL=$WERCKER_DEPLOY_URL
-          echo WERCKER_FAILED_STEP_DISPLAY_NAME=$WERCKER_FAILED_STEP_DISPLAY_NAME     
+        description: $PAGERDUTY_DESCRIPTION
+        branch: $PAGERDUTY_BRANCH
 test-docker-build2:
   # Test the docker-build step (part 2)
   # Test that we can pull the newly-created image, start it as a service, and connect to it
