@@ -95,9 +95,7 @@ build:
     - script: 
         name: Run the unit tests
         code: |
-          go test ./...   
-          ### fail!!!
-          exit 1                
+          go test ./...                
   after-steps:
     - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
