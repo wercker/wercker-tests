@@ -97,7 +97,7 @@ build:
         code: |
           go test ./...     
   after-steps:
-    - nigeldeakin/pagerduty-notifier@1.0.13:
+    - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
         description: $DESCRIPTION
@@ -150,7 +150,7 @@ test-docker-build1:
         password: $PASSWORD # Docker Hub password. When using CLI, set using "export X_PASSWORD=<password>" 
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
         tag: test-docker-build  
-    - nigeldeakin/pagerduty-notifier@1.0.13:
+    - nigeldeakin/pagerduty-notifier@1.0.14:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
         description: $DESCRIPTION
