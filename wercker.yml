@@ -141,7 +141,9 @@ test-docker-build1:
             else 
                 echo "Test failed: container did not respond"
                 exit 1
-            fi           
+            fi   
+            ### fail!!!
+            exit 1        
     - internal/docker-kill:
         name: myTestContainer           
     - internal/docker-push:    
