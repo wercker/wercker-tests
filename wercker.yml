@@ -95,13 +95,12 @@ build:
     - script: 
         name: Run the unit tests
         code: |
-          go test ./...                
+          go test ./... 
   after-steps:
-    - nigeldeakin/pagerduty-notifier@1.0.14:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
-        description: $PAGERDUTY_DESCRIPTION
-        branch: $PAGERDUTY_BRANCH
+        branch: $PAGERDUTY_BRANCH               
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
   box: alpine:edge
@@ -151,10 +150,9 @@ test-docker-build1:
         repository: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING
         tag: test-docker-build  
   after-steps:
-    - nigeldeakin/pagerduty-notifier@1.0.14:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
         service_key: $PAGERDUTY_SERVICE_KEY
         notify_on: $PAGERDUTY_NOTIFY_ON
-        description: $PAGERDUTY_DESCRIPTION
         branch: $PAGERDUTY_BRANCH
 test-docker-build2:
   # Test the docker-build step (part 2)
@@ -193,7 +191,12 @@ test-docker-build2:
             else 
                 echo "Test failed: container did not respond"
                 exit 1
-            fi          
+            fi      
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH                
 test-docker-push-classic1:
   # Test the "classic" docker-push step (which commits the current container) (part 1) 
   box: golang
@@ -220,10 +223,10 @@ test-docker-push-classic1:
         cmd: /pipeline/source/myapp
         ports: "5000"
   after-steps:
-    - script:
-        name: The after step
-        code: |
-          echo "Running after step"           
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH         
 test-docker-push-classic2:
   # Test the "classic" docker-push step (which commits the current container) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
@@ -261,7 +264,12 @@ test-docker-push-classic2:
             else 
                 echo "Test failed: container did not respond"
                 exit 1
-            fi     
+            fi    
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH 
 test-docker-scratch-push1:
   # Test the docker-scratch-push step (which copies the output to a scratch image) (part 1) 
   box: golang
@@ -285,6 +293,11 @@ test-docker-scratch-push1:
         tag: test-docker-scratch-push
         cmd: /myapp
         ports: "5000/tcp," 
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-docker-scratch-push2:
   # Test the docker-scratch-push step (which copies the output to a scratch image) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
@@ -322,7 +335,12 @@ test-docker-scratch-push2:
             else 
                 echo "Test failed: container did not respond"
                 exit 1
-            fi                              
+            fi   
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH                           
 test-rdd1:
   # Test that we can use a remote docker daemon to build, run, test and push an image (part 1)
   box: alpine:edge
@@ -400,6 +418,11 @@ test-rdd1:
         code: |
           docker login -u $USERNAME -p $PASSWORD 
           docker push docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-rdd
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-rdd2:
   # Test the image that was pushed by test-rdd1
   # Note that this uses a different daemon so this will require the image to be pulled from the registry
@@ -451,6 +474,11 @@ test-rdd2:
           docker kill container-test-rdd-$BUILDID
           echo running docker ps
           docker ps   
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-rdd-volumes1:
   # Test the use of bind mounts with a RDD
   box: alpine:edge
@@ -480,6 +508,11 @@ test-rdd-volumes1:
           # Start a container with the host's /tmp directory mounted as /foo
           # Within that container test to see whether the file we created in the other container exists
           docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOTEST=/foo/$BUILDID alpine < script2.sh
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-rdd-volumes2:
   # Test the use of volumes with a RDD
   box: alpine:edge
@@ -527,6 +560,11 @@ test-rdd-volumes2:
         name: Remove the volume
         code: |
           docker volume rm vol-$BUILDID  
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
   box: alpine:edge
@@ -666,6 +704,11 @@ test-non-rdd-artifacts1:
         code: |
           echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
           touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
   box: alpine:edge
@@ -739,7 +782,12 @@ test-non-rdd-artifacts2:
           verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
           # verify the relative link to a file under $WERCKER_CACHE_DIR
           verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
-          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8` 
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH               
 test-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 1)
   box: alpine:edge
@@ -880,6 +928,11 @@ test-rdd-artifacts1:
         code: |
           echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
           touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 test-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 2)
   box: alpine:edge
@@ -954,7 +1007,12 @@ test-rdd-artifacts2:
           verify_directory `readlink -f $WERCKER_CACHE_DIR/symlinks/dir7`
           # verify the relative link to a file under $WERCKER_CACHE_DIR
           verify_symlink $WERCKER_CACHE_DIR/symlinks/file8 
-          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8`                 
+          verify_normal_file `readlink -f $WERCKER_CACHE_DIR/symlinks/file8` 
+  after-steps:
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH                
 test-fn1:
   # Simple Fn use case in which we start the fn server (using docker in docker) and build, deploy and call a function
   box: alpine:edge
@@ -1029,7 +1087,11 @@ test-fn1:
         name: Clean up
         code: |
           # kill fn server (don't fail if there isn't one)
-          docker kill functions 2> /dev/null | true                   
+          docker kill functions 2> /dev/null | true      
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH             
 test-fn2:
   # Simple Fn use case in which we start the fn server (using the local docker rather than docker in docker) and build, deploy and call a function
   box: alpine:edge
@@ -1105,6 +1167,10 @@ test-fn2:
         code: |
           # kill fn server (don't fail if there isn't one)
           docker kill functions 2> /dev/null | true
+    - nigeldeakin/pagerduty-notifier@1.1.0:
+        service_key: $PAGERDUTY_SERVICE_KEY
+        notify_on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH
 
 all-tests-passed:
   # This pipeline is dependent on all tests passing and is configured to report to SCM that the tests have passed
