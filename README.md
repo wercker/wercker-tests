@@ -24,9 +24,16 @@ build --> test-docker-build1        --> test-docker-build2         Tests interna
 Each of the above sequences is followed by a fan-in to the `all-tests-passed` pipeline.
 
 The following environment variables must be set:
+
 * `USERNAME` - Any docker Hub username
 * `PASSWORD` - Any docker Hub password
 * `PROD_OR_STAGING` (Optional) - A string used to distinguish between any workflows that might be run concurrently using the same username. This is appended to any image tags that are created in order to avoid name clashes on Docker Hub. Use lower case characters only. 
+
+The following environment variables are optional.  They can be used to configure pagerduty notifications.
+
+* `PAGERDUTY_SERVICE_KEY` - PagerDuty service key that defines the notification will be sent to. If not set then the notification after-step will fail harmlessly.
+* `PAGERDUTY_NOTIFY_ON` - Leave unset or set to `failed` to send notifications when the pipeline fails. Set to anything else (such as `all`) to send pagerduty notifications when the pipeline passes as well.
+* `PAGERDUTY_BRANCH` - Leave unset to send notifications for builds on all branches. Set to a branch name (such as `master` to send notifications only for builds on the specified branch. 
 
 ## Running these tests locally
 
