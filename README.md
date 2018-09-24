@@ -27,7 +27,7 @@ The following environment variables must be set:
 
 * `USERNAME` - Any docker Hub username
 * `PASSWORD` - Any docker Hub password
-* `PROD_OR_STAGING` (Optional) - A string used to distinguish between any workflows that might be run concurrently using the same username. This is appended to any image tags that are created in order to avoid name clashes on Docker Hub. Use lower case characters only. 
+* `PROD_OR_STAGING` - A string used to distinguish between any workflows that might be run concurrently using the same username. This is appended to any image tags that are created in order to avoid name clashes on Docker Hub. Use lower case characters only. 
 
 The following environment variables are optional.  They can be used to configure pagerduty notifications.
 
