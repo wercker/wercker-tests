@@ -806,6 +806,9 @@ test-rdd-artifacts1:
   docker: true
   steps:       
     - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl    
+    - script:
         name: Create files and symbolic links in $WERCKER_OUTPUT_DIR (/pipeline/output)
         code: |
           #  create a regular file
