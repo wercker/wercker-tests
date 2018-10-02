@@ -492,6 +492,9 @@ test-rdd-volumes1:
           echo Copy build-id to /pipeline/output for any subsequent pipeline to use
           cp /pipeline/source/build-id /pipeline/output  
     - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl             
+    - script:
         name: Install docker
         code: apk --no-cache add docker           
     - script:
@@ -525,6 +528,9 @@ test-rdd-volumes2:
           echo BUILDID=$BUILDID
           echo Copy build-id to /pipeline/output for any subsequent pipeline to use
           cp /pipeline/source/build-id /pipeline/output  
+    - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl           
     - script:
         name: Install docker
         code: apk --no-cache add docker           
@@ -569,6 +575,9 @@ test-non-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
   box: alpine:edge
   steps:    
+    - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl   
     - script:
         name: Create files and symbolic links in $WERCKER_OUTPUT_DIR (/pipeline/output)
         code: |
@@ -715,6 +724,9 @@ test-non-rdd-artifacts2:
   base-path: /a/b/c
   steps:
     - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl   
+    - script:
         name: Verify files and links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
         code: |
           echo $WERCKER_SOURCE_DIR/targets
@@ -793,6 +805,9 @@ test-rdd-artifacts1:
   box: alpine:edge
   docker: true
   steps:       
+    - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl    
     - script:
         name: Create files and symbolic links in $WERCKER_OUTPUT_DIR (/pipeline/output)
         code: |
@@ -939,6 +954,9 @@ test-rdd-artifacts2:
   base-path: /a/b/c
   docker: true
   steps:
+    - script:
+        name: Install Curl (needed by pagerduty-notifier)
+        code: apk --no-cache add curl   
     - script:
         name: Verify files and links we added to WERCKER_OUTPUT_DIR (/pipeline/output) in the previous pipeline are present in $WERCKER_SOURCE_DIR in this pipeline
         code: |
