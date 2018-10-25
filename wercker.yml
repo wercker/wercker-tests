@@ -99,8 +99,8 @@ build:
     - script:
         name: Display some protected and non-protected environment variables
         code: |
-          echo "UNPROTECTED1=$UNPROTECTED1"
-          echo "PROTECTED1=$PROTECTED1"
+          echo "APPLEVEL_UNPROTECTED1=$APPLEVEL_UNPROTECTED1"
+          echo "APPLEVEL_PROTECTED1=$APPLEVEL_PROTECTED1"
   after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
