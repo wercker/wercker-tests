@@ -96,11 +96,10 @@ build:
         name: Run the unit tests
         code: |
           go test ./... 
-    - script:
-        name: Display some protected and non-protected environment variables
-        code: |
-          echo "APPLEVEL_UNPROTECTED1=$APPLEVEL_UNPROTECTED1"
-          echo "APPLEVEL_PROTECTED1=$APPLEVEL_PROTECTED1"
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1
   after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
@@ -1196,6 +1195,17 @@ test-fn2:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
         branch: $PAGERDUTY_BRANCH
+
+dump-env-vars-1: 
+  box: golang
+  steps:
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1
 
 all-tests-passed:
   # This pipeline is dependent on all tests passing and is configured to report to SCM that the tests have passed
