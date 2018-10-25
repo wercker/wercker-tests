@@ -1203,7 +1203,7 @@ dump-env-vars-1:
   box: golang
   steps:
     - script:
-        name: Display some protected and non-protected environment variables
+        name: Display  some protected and non-protected environment variables
         code: |
           echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
           echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
