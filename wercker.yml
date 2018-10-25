@@ -96,6 +96,11 @@ build:
         name: Run the unit tests
         code: |
           go test ./... 
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "UNPROTECTED1=$UNPROTECTED1"
+          echo "PROTECTED1=$PROTECTED1"
   after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
