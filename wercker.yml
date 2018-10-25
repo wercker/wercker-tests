@@ -95,7 +95,10 @@ build:
     - script: 
         name: Run the unit tests
         code: |
-          go test ./... 
+          go test ./...         
+    - script: 
+        name: Dump some env vars
+        code: |
           echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
           echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
           echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
@@ -1206,6 +1209,39 @@ dump-env-vars-1:
           echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
           echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
           echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1
+
+dump-env-vars-2: 
+  box: golang
+  steps:
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1
+
+dump-env-vars-3: 
+  box: golang
+  steps:
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1
+
+dump-env-vars-4: 
+  box: golang
+  steps:
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1          
 
 all-tests-passed:
   # This pipeline is dependent on all tests passing and is configured to report to SCM that the tests have passed
