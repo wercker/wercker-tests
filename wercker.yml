@@ -149,7 +149,11 @@ test-docker-build1:
                 exit 1
             fi      
     - internal/docker-kill:
-        name: myTestContainer           
+        name: myTestContainer      
+        
+    - script: 
+        code: |
+            export SINGLE_LINE='This is a single line env var'     
     - internal/docker-push:    
         image-name: my-new-image
         username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
