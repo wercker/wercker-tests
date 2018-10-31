@@ -154,6 +154,12 @@ test-docker-build1:
     - script: 
         code: |
             export SINGLE_LINE='This is a single line env var'     
+            export MULTPLE_LINE="
+              Here
+              is
+              the 
+              news"
+            env
     - internal/docker-push:    
         image-name: my-new-image
         username: $USERNAME # Docker Hub username. When using CLI, set using "export X_USERNAME=<username>"  
