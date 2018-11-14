@@ -380,9 +380,9 @@ test-docker-build-ecr-2:
             fi      
     - internal/docker-kill:
         name: myTestContainer  
-#    - script:
-#        name: Delete repository  
-#        code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
+    - script:
+        name: Delete repository  
+        code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
 #  after-steps:
 #    - nigeldeakin/pagerduty-notifier:
 #        service-key: $PAGERDUTY_SERVICE_KEY
