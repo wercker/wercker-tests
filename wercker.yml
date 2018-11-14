@@ -298,7 +298,7 @@ test-docker-build-ecr-1:
         username: $ECR_USERNAME 
         password: $ECR_PASSWORD 
         repository: $ECR_REGISTRY/$REPOSITORY_NAME
-        tag: latest  
+        tag: fe fi fo fum latest  
 #  after-steps:
 #    - nigeldeakin/pagerduty-notifier:
 #        service-key: $PAGERDUTY_SERVICE_KEY
@@ -380,9 +380,9 @@ test-docker-build-ecr-2:
             fi      
     - internal/docker-kill:
         name: myTestContainer  
-    - script:
-        name: Delete repository  
-        code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
+#    - script:
+#        name: Delete repository  
+#        code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
 #  after-steps:
 #    - nigeldeakin/pagerduty-notifier:
 #        service-key: $PAGERDUTY_SERVICE_KEY
