@@ -8,6 +8,7 @@ workflows:
       - name: test-docker-build-ecr-2
         requires:
           - test-docker-build-ecr-1
+          
   - name: tests
     pipelines:
       - name: build
