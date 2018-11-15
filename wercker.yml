@@ -210,6 +210,7 @@ test-docker-build-ecr-1:
   # This is part 1 of a two-part test, and should be followed by test-docker-build-ecr-2
   # Test that we can run the docker-build step, test it using docker-run and then push it to a Amazon ECR repo
   # This pipeline requires the following environment variables to be set:
+  #   AWS_REGION (e.g. us-east-1, us-east-2 or whatever)
   #   AWS_ACCESS_KEY_ID
   #   AWS_SECRET_ACCESS_KEY
   #   ECR_REGISTRY (https://<aws_account_id>.dkr.ecr.<region>.amazonaws.com)
@@ -270,7 +271,7 @@ test-docker-build-ecr-1:
           aws configure <<!
           $AWS_ACCESS_KEY_ID
           $AWS_SECRET_ACCESS_KEY
-          us-east-2
+          $AWS_REGION
 
           !
     - script:
@@ -308,10 +309,11 @@ test-docker-build-ecr-2:
   # This is part 2 of a two-part test, and must follow after test-docker-build-ecr-1
   # Test that we can pull the image that the preceding pipeline created in Amazon ECR, start it using internal/docker-run, and connect to it
   # This pipeline requires the following environment variables to be set:
+  #   AWS_REGION (e.g. us-east-1, us-east-2 or whatever)
   #   AWS_ACCESS_KEY_ID
   #   AWS_SECRET_ACCESS_KEY
-  #   REGISTRY (https://<aws_account_id>.dkr.ecr.<region>.amazonaws.com)
-  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH  
+  #   ECR_REGISTRY (https://<aws_account_id>.dkr.ecr.<region>.amazonaws.com)
+  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH 
   # Optional environment variables
   #   PROD_OR_STAGING - set to a string to avoid repository name clashes between concurrent builds on prod and staging 
   box: python
@@ -339,7 +341,7 @@ test-docker-build-ecr-2:
           aws configure <<!
           $AWS_ACCESS_KEY_ID
           $AWS_SECRET_ACCESS_KEY
-          us-east-2
+          $AWS_REGION
 
           !
     - script:
@@ -383,10 +385,10 @@ test-docker-build-ecr-2:
     - script:
         name: Delete repository  
         code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
-#  after-steps:
-#    - nigeldeakin/pagerduty-notifier:
-#        service-key: $PAGERDUTY_SERVICE_KEY
-#        notify-on: $PAGERDUTY_NOTIFY_ON
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
         branch: $PAGERDUTY_BRANCH   
 
 test-docker-push-classic1:
