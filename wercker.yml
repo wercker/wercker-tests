@@ -910,11 +910,7 @@ test-non-rdd-artifacts1:
     - script:
         name: Create a file in /tmp  
         code: |
-          touch /tmp/foobarfoo
-    - script:
-        name: Create a file in /scratch  
-        code: |
-          touch /scratch/scratchmyback      
+          touch /tmp/foobarfoo  
   after-steps:
     - script:
         name: Examine the file system
@@ -932,9 +928,7 @@ test-non-rdd-artifacts1:
           echo ls -l $WERCKER_REPORT_ARTIFACTS_DIR
           ls -l $WERCKER_REPORT_ARTIFACTS_DIR        
           echo ls -l /tmp
-          ls -l /tmp
-          echo ls -l /scratch
-          ls -l /scratch          
+          ls -l /tmp      
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
