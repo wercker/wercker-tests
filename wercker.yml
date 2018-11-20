@@ -908,6 +908,17 @@ test-non-rdd-artifacts1:
           echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
           touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
   after-steps:
+    - script:
+        name: Examine the file system
+        code: |
+          echo WERCKER_ROOT=$WERCKER_ROOT
+          echo ls -l $WERCKER_ROOT
+          echo WERCKER_SOURCE_DIR=$WERCKER_SOURCE_DIR
+          echo ls -l $WERCKER_SOURCE_DIR
+          echo WERCKER_CACHE_DIR=$WERCKER_CACHE_DIR
+          echo ls -l $WERCKER_CACHE_DIR   
+          echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
+          echo ls -l $WERCKER_REPORT_ARTIFACTS_DIR        
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
