@@ -911,6 +911,10 @@ test-non-rdd-artifacts1:
         name: Create a file in /tmp  
         code: |
           touch /tmp/foobarfoo
+    - script:
+        name: Create a file in /scratch  
+        code: |
+          touch /scratch/scratchmyback      
   after-steps:
     - script:
         name: Examine the file system
@@ -923,12 +927,14 @@ test-non-rdd-artifacts1:
           ls -l $WERCKER_SOURCE_DIR
           echo WERCKER_CACHE_DIR=$WERCKER_CACHE_DIR
           echo ls -l $WERCKER_CACHE_DIR
-          $WERCKER_CACHE_DIR   
+          ls -l $WERCKER_CACHE_DIR   
           echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
           echo ls -l $WERCKER_REPORT_ARTIFACTS_DIR
           ls -l $WERCKER_REPORT_ARTIFACTS_DIR        
           echo ls -l /tmp
           ls -l /tmp
+          echo ls -l /scratch
+          ls -l /scratch          
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
