@@ -1,4 +1,13 @@
 workflows:
+  - name: test-docker-build-ecr
+    pipelines:
+      - name: build
+      - name: test-docker-build-ecr-1
+        requires:
+          - build
+      - name: test-docker-build-ecr-2
+        requires:
+          - test-docker-build-ecr-1        
   - name: tests
     pipelines:
       - name: build
@@ -76,13 +85,13 @@ build:
           echo BUILDID=$BUILDID
     - script:    
         name: Check USERNAME variable
-        # We also require PASSWORD to be set on those pipelines that require it (until we get WRKR-885 or WRKR-886)
-        # User can also optionally set PROD_OR_STAGING
+        # USERNAME must be set to a valid Docker Hub username
+        # We also require PASSWORD to be set to the corresponding password on those pipelines that require it (until we get WRKR-885 or WRKR-886)
         code: |
           if [[ -z "$USERNAME" ]]; then
             echo Environment variable \$USERNAME is not set
             return 1
-          fi   
+          fi  
     - script:
         name: Edit source to add build ID
         # this is so we can be sure that we are testing the right version of our images
@@ -109,7 +118,7 @@ build:
         notify-on: $PAGERDUTY_NOTIFY_ON
         branch: $PAGERDUTY_BRANCH               
 test-docker-build1:
-  # Test that we can run the docker-build step, test it using docker-run and then push it to a repo
+  # Test that we can run the docker-build step, test it using docker-run and then push it to a Docker Hub repo
   box: alpine:edge
   steps:
     - script:
@@ -213,7 +222,192 @@ test-docker-build2:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
-        branch: $PAGERDUTY_BRANCH                
+        branch: $PAGERDUTY_BRANCH     
+test-docker-build-ecr-1:
+  # This is part 1 of a two-part test, and should be followed by test-docker-build-ecr-2
+  # Test that we can run the docker-build step, test it using docker-run and then push it to a Amazon ECR repo
+  # This pipeline requires the following environment variables to be set:
+  #   AWS_REGION (e.g. us-east-1, us-east-2 or whatever)
+  #   AWS_ACCESS_KEY_ID
+  #   AWS_SECRET_ACCESS_KEY
+  #   ECR_REGISTRY (https://<aws_account_id>.dkr.ecr.<region>.amazonaws.com)
+  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH  
+  # Optional environment variables
+  #   PROD_OR_STAGING - set to a string to avoid repository name clashes between concurrent builds on prod and staging 
+  box: python
+  steps:
+    
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - internal/docker-build: 
+        dockerfile: Dockerfile 
+        image-name: my-new-image # name used to refer to this image until it's pushed   
+    - internal/docker-run:
+        image: my-new-image
+        name: myTestContainer
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://myTestContainer:5000); do printf '.'; sleep 5; done        
+    - script: 
+        name: Test the container that we started using docker-run
+        code: |
+            if curlOutput=`curl -s myTestContainer:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi      
+    - internal/docker-kill:
+        name: myTestContainer    
+    - script:
+        name: Install AWS CLI
+        code: |
+          curl -O https://bootstrap.pypa.io/get-pip.py
+          python get-pip.py --user
+          export PATH=~/.local/bin:$PATH    
+          pip install awscli --upgrade --user
+          aws --version
+    - script:
+        name: Configure AWS CLI using AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+        code: |
+          # The aws configure command prompts for (1) the access key id (2) the secret access key (3) the default region and (4) the default output format
+          # Note that we respond to question (4) with an empty line
+          aws configure <<!
+          $AWS_ACCESS_KEY_ID
+          $AWS_SECRET_ACCESS_KEY
+          $AWS_REGION
+
+          !
+    - script:
+        name: Construct repository name 
+        code: |
+          # Note that we convert PROD_OR_STAGING to lower case
+          export REPOSITORY_NAME=wercker-test-test-docker-build-ecr${PROD_OR_STAGING,,}
+          echo REPOSITORY_NAME=$REPOSITORY_NAME
+    - script:
+        name: Delete repository (if it already exists; ignore error if it doesn't)
+        code: |
+          aws ecr delete-repository --repository-name $REPOSITORY_NAME --force || true    
+    - script:
+        name: Create repository
+        code: |
+
+          aws ecr create-repository --repository-name $REPOSITORY_NAME
+    - script:
+        name: Generate ECR authorization token (valid for registry for 12 hours)
+        code: |          
+          export ECR_USERNAME=AWS
+          export ECR_PASSWORD=`aws ecr get-authorization-token --output text --query 'authorizationData[].authorizationToken' | base64 -d | cut -d: -f2`
+    - internal/docker-push:    
+        image-name: my-new-image
+        username: $ECR_USERNAME 
+        password: $ECR_PASSWORD 
+        repository: $ECR_REGISTRY/$REPOSITORY_NAME
+        tag: fe fi fo fum latest  
+#  after-steps:
+#    - nigeldeakin/pagerduty-notifier:
+#        service-key: $PAGERDUTY_SERVICE_KEY
+#        notify-on: $PAGERDUTY_NOTIFY_ON
+#        branch: $PAGERDUTY_BRANCH    
+test-docker-build-ecr-2:
+  # This is part 2 of a two-part test, and must follow after test-docker-build-ecr-1
+  # Test that we can pull the image that the preceding pipeline created in Amazon ECR, start it using internal/docker-run, and connect to it
+  # This pipeline requires the following environment variables to be set:
+  #   AWS_REGION (e.g. us-east-1, us-east-2 or whatever)
+  #   AWS_ACCESS_KEY_ID
+  #   AWS_SECRET_ACCESS_KEY
+  #   ECR_REGISTRY (https://<aws_account_id>.dkr.ecr.<region>.amazonaws.com)
+  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH 
+  # Optional environment variables
+  #   PROD_OR_STAGING - set to a string to avoid repository name clashes between concurrent builds on prod and staging 
+  box: python
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output            
+    - script:
+        name: Install AWS CLI
+        code: |
+          curl -O https://bootstrap.pypa.io/get-pip.py
+          python get-pip.py --user
+          export PATH=~/.local/bin:$PATH    
+          pip install awscli --upgrade --user
+          aws --version
+    - script:
+        name: Configure AWS CLI using AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+        code: |
+          # The aws configure command prompts for (1) the access key id (2) the secret access key (3) the default region and (4) the default output format
+          # Note that we respond to question (4) with an empty line
+          aws configure <<!
+          $AWS_ACCESS_KEY_ID
+          $AWS_SECRET_ACCESS_KEY
+          $AWS_REGION
+
+          !
+    - script:
+        name: Construct repository name 
+        code: |
+          # Note that we convert PROD_OR_STAGING to lower case
+          export REPOSITORY_NAME=wercker-test-test-docker-build-ecr${PROD_OR_STAGING,,}
+          echo REPOSITORY_NAME=$REPOSITORY_NAME
+    - script:
+        name: Generate ECR authorization token (valid for registry for 12 hours)
+        code: |          
+          export ECR_USERNAME=AWS
+          export ECR_PASSWORD=`aws ecr get-authorization-token --output text --query 'authorizationData[].authorizationToken' | base64 -d | cut -d: -f2`
+    - internal/docker-run:
+        image: $ECR_REGISTRY/$REPOSITORY_NAME:latest
+        username: $ECR_USERNAME 
+        password: $ECR_PASSWORD 
+        name: myTestContainer
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://myTestContainer:5000); do printf '.'; sleep 5; done        
+    - script: 
+        name: Test the container that we started using docker-run
+        code: |
+            if curlOutput=`curl -s myTestContainer:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi      
+    - internal/docker-kill:
+        name: myTestContainer  
+    - script:
+        name: Delete repository  
+        code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH   
+
 test-docker-push-classic1:
   # Test the "classic" docker-push step (which commits the current container) (part 1) 
   box: golang
