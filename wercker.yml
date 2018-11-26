@@ -76,6 +76,13 @@ build:
   box: golang
   steps:
     - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1    
+    - script:
         name: Create a unique id for the run, common to all pipelines in the workflow
         code: |
           echo Creating a unique id for the run, common to all pipelines in the workflow
@@ -121,6 +128,13 @@ test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a Docker Hub repo
   box: alpine:edge
   steps:
+    - script:
+        name: Display some protected and non-protected environment variables
+        code: |
+          echo "APPLEVEL_UNPROTECTED1="$APPLEVEL_UNPROTECTED1
+          echo "APPLEVEL_PROTECTED1="$APPLEVEL_PROTECTED1
+          echo "PIPELINE_LEVEL_UNPROTECTED1="$PIPELINE_LEVEL_UNPROTECTED1
+          echo "PIPELINE_LEVEL_PROTECTED1="$PIPELINE_LEVEL_PROTECTED1    
     - script:
         name: Get the a unique id for the run, common to all pipelines in the workflow
         code: |
