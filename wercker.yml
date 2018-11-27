@@ -907,6 +907,7 @@ test-non-rdd-artifacts1:
         code: |
           echo WERCKER_REPORT_ARTIFACTS_DIR=$WERCKER_REPORT_ARTIFACTS_DIR
           touch $WERCKER_REPORT_ARTIFACTS_DIR/reportfile 
+  after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
         notify-on: $PAGERDUTY_NOTIFY_ON
