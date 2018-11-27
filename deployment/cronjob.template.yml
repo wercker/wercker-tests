@@ -27,7 +27,7 @@ spec:
             - -c
             - |
               apk --no-cache add curl
-              curl -H 'Authorization: Bearer ${TPL_WERCKER_TOKEN}' -H 'Content-Type: application/json' -d '{"pipelineId":"${TPL_PIPELINE}","message":"${TPL_MESSAGE} (`date -u`)"}' ${TPL_ENDPOINT}
+              curl -H 'Authorization: Bearer ${TPL_WERCKER_TOKEN}' -H 'Content-Type: application/json' -d '{"pipelineId":"${TPL_PIPELINE}","message":"${TPL_MESSAGE}"}' ${TPL_ENDPOINT}
             resources:
               requests:
                 cpu: 50m
