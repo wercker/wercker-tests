@@ -1,13 +1,4 @@
-workflows:
-  - name: test-docker-build-ocir
-    pipelines:
-      - name: build
-      - name: test-docker-build-ocir-1
-        requires:
-          - build
-      - name: test-docker-build-ocir-2
-        requires:
-          - test-docker-build-ocir-1        
+workflows:   
   - name: tests
     pipelines:
       - name: build
@@ -69,6 +60,20 @@ workflows:
       - name: test-rdd-volumes2
         requires:
           - build
+      #
+      - name: test-docker-build-ecr-1
+        requires:
+          - build
+      - name: test-docker-build-ecr-2
+        requires:
+          - test-docker-build-ecr-1    
+      # 
+      - name: test-docker-build-ocir-1
+        requires:
+          - build
+      - name: test-docker-build-ocir-2
+        requires:
+          - test-docker-build-ocir-1   
 
 build: 
   # The build step doesn't do very much 
@@ -458,11 +463,11 @@ test-docker-build-ocir-1:
         repository: $OCIR_REPOSITORY_NAME
         registry: $OCIR_REGISTRY_NAME
         tag: latest  
-#  after-steps:
-#    - nigeldeakin/pagerduty-notifier:
-#        service-key: $PAGERDUTY_SERVICE_KEY
-#        notify-on: $PAGERDUTY_NOTIFY_ON
-#        branch: $PAGERDUTY_BRANCH    
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH    
 test-docker-build-ocir-2:
   # This is part 2 of a two-part test, and must follow after test-docker-build-ocir-1
   # Test that we can pull the image that the preceding pipeline created in an Oracle Cloud Infrastructure Registry (OCIR) repo, start it using internal/docker-run, and connect to it
@@ -523,11 +528,11 @@ test-docker-build-ocir-2:
             fi      
     - internal/docker-kill:
         name: myTestContainer  
-#  after-steps:
-#    - nigeldeakin/pagerduty-notifier:
-#        service-key: $PAGERDUTY_SERVICE_KEY
-#        notify-on: $PAGERDUTY_NOTIFY_ON
-#        branch: $PAGERDUTY_BRANCH   
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH   
 
 test-docker-push-classic1:
   # Test the "classic" docker-push step (which commits the current container) (part 1) 
