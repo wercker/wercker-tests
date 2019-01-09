@@ -1,13 +1,4 @@
-workflows:
-  - name: test-docker-build-ecr
-    pipelines:
-      - name: build
-      - name: test-docker-build-ecr-1
-        requires:
-          - build
-      - name: test-docker-build-ecr-2
-        requires:
-          - test-docker-build-ecr-1        
+workflows:   
   - name: tests
     pipelines:
       - name: build
@@ -69,6 +60,20 @@ workflows:
       - name: test-rdd-volumes2
         requires:
           - build
+      #
+      - name: test-docker-build-ecr-1
+        requires:
+          - build
+      - name: test-docker-build-ecr-2
+        requires:
+          - test-docker-build-ecr-1    
+      # 
+      - name: test-docker-build-ocir-1
+        requires:
+          - build
+      - name: test-docker-build-ocir-2
+        requires:
+          - test-docker-build-ocir-1   
 
 build: 
   # The build step doesn't do very much 
@@ -385,6 +390,144 @@ test-docker-build-ecr-2:
     - script:
         name: Delete repository  
         code: aws ecr delete-repository --repository-name $REPOSITORY_NAME --force  
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH   
+
+test-docker-build-ocir-1:
+  # This is part 1 of a two-part test, and should be followed by test-docker-build-ocir-2
+  # Test that we can run the docker-build step, test it using docker-run and then push it to an Oracle Cloud Infrastructure Registry (OCIR) repo
+  # This pipeline requires the following environment variables to be set:
+  #   OCI_REGION (e.g. iad, fra, lhr, phx)
+  #   OCI_TENANCY_NAME
+  #   OCIR_USERNAME (e.g. $OCI_TENANCY_NAME/foo@bar.com)
+  #   OCIR_AUTH_TOKEN
+  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH  
+  # Optional environment variables
+  #   PROD_OR_STAGING - set to a string to avoid repository name clashes between concurrent builds on prod and staging 
+  box: python
+  steps:
+    
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output  
+    - internal/docker-build: 
+        dockerfile: Dockerfile 
+        image-name: my-new-image # name used to refer to this image until it's pushed   
+    - internal/docker-run:
+        image: my-new-image
+        name: myTestContainer
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://myTestContainer:5000); do printf '.'; sleep 5; done        
+    - script: 
+        name: Test the container that we started using docker-run
+        code: |
+            if curlOutput=`curl -s myTestContainer:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi      
+    - internal/docker-kill:
+        name: myTestContainer    
+    - script:
+        name: Construct OCIR registry name 
+        code: |
+          export OCIR_REGISTRY_NAME=https://$OCI_REGION.ocir.io/v2
+          echo OCIR_REGISTRY_NAME=$OCIR_REGISTRY_NAME
+    - script:
+        name: Construct OCIR repository name 
+        code: |
+          # Note that we convert PROD_OR_STAGING to lower case
+          export OCIR_REPOSITORY_NAME=$OCI_REGION.ocir.io/$OCI_TENANCY_NAME/wercker-tests/test-docker-build-ocir${PROD_OR_STAGING,,}
+          echo OCIR_REPOSITORY_NAME=$OCIR_REPOSITORY_NAME
+    - internal/docker-push:    
+        image-name: my-new-image
+        username: $OCIR_USERNAME 
+        password: $OCIR_AUTH_TOKEN 
+        repository: $OCIR_REPOSITORY_NAME
+        registry: $OCIR_REGISTRY_NAME
+        tag: latest  
+  after-steps:
+    - nigeldeakin/pagerduty-notifier:
+        service-key: $PAGERDUTY_SERVICE_KEY
+        notify-on: $PAGERDUTY_NOTIFY_ON
+        branch: $PAGERDUTY_BRANCH    
+test-docker-build-ocir-2:
+  # This is part 2 of a two-part test, and must follow after test-docker-build-ocir-1
+  # Test that we can pull the image that the preceding pipeline created in an Oracle Cloud Infrastructure Registry (OCIR) repo, start it using internal/docker-run, and connect to it
+  # This pipeline requires the following environment variables to be set:
+  #   OCI_REGION (e.g. iad, fra, lhr, phx)
+  #   OCI_TENANCY_NAME
+  #   OCIR_USERNAME (e.g. $OCI_TENANCY_NAME/foo@bar.com)
+  #   OCIR_AUTH_TOKEN
+  #   PAGERDUTY_SERVICE_KEY, PAGERDUTY_NOTIFY_ON, PAGERDUTY_BRANCH  
+  # Optional environment variables
+  #   PROD_OR_STAGING - must match whatever was set for test-docker-build-ocir-1 
+
+  box: python
+  steps:
+    - script:
+        name: Get the a unique id for the run, common to all pipelines in the workflow
+        code: |
+          export BUILDID=`cat /pipeline/source/build-id`
+          echo BUILDID=$BUILDID
+          echo Copy build-id to /pipeline/output for any subsequent pipeline to use
+          cp /pipeline/source/build-id /pipeline/output   
+    - script:
+        name: Construct OCIR registry name 
+        code: |
+          export OCIR_REGISTRY_NAME=https://$OCI_REGION.ocir.io
+          echo OCIR_REGISTRY_NAME=$OCIR_REGISTRY_NAME          
+    - script:
+        name: Construct OCIR repository name 
+        code: |
+          # Note that we convert PROD_OR_STAGING to lower case
+          export OCIR_REPOSITORY_NAME=$OCI_REGION.ocir.io/$OCI_TENANCY_NAME/wercker-tests/test-docker-build-ocir${PROD_OR_STAGING,,}
+          echo OCIR_REPOSITORY_NAME=$OCIR_REPOSITORY_NAME    
+          echo $OCIR_REGISTRY_NAME/$OCIR_REPOSITORY_NAME:latest   
+    - internal/docker-run:
+        image: $OCIR_REPOSITORY_NAME:latest
+        username: $OCIR_USERNAME 
+        password: $OCIR_AUTH_TOKEN 
+        name: myTestContainer
+    - script: 
+        name: Wait for container to start 
+        code: | 
+          until $(curl --output /dev/null --silent --head --fail http://myTestContainer:5000); do printf '.'; sleep 5; done        
+    - script: 
+        name: Test the container that we started using docker-run
+        code: |
+            if curlOutput=`curl -s myTestContainer:5000`; then 
+                export expected="Hello World!! $BUILDID"
+                if [ "$curlOutput" == "$expected" ]; then
+                    echo "Test passed: container gave expected response: " $expected
+                else
+                    echo "Test failed: container gave unexpected response: " $curlOutput
+                    echo "The expected response was: " $expected
+                    exit 1
+                fi   
+            else 
+                echo "Test failed: container did not respond"
+                exit 1
+            fi      
+    - internal/docker-kill:
+        name: myTestContainer  
   after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
