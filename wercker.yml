@@ -117,7 +117,7 @@ build:
         branch: $PAGERDUTY_BRANCH               
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a Docker Hub repo
-  box: alpine
+  box: alpine:3.1
   steps:
     - script:
         name: Get the a unique id for the run, common to all pipelines in the workflow
@@ -171,7 +171,7 @@ test-docker-build1:
 test-docker-build2:
   # Test the docker-build step (part 2)
   # Test that we can pull the newly-created image, start it as a service, and connect to it
-  box: alpine
+  box: alpine:3.1
   services: 
     - name: test-docker-build-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-build
@@ -567,7 +567,7 @@ test-docker-push-classic1:
 test-docker-push-classic2:
   # Test the "classic" docker-push step (which commits the current container) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
-  box: alpine
+  box: alpine:3.1
   services: 
     - name: test-docker-classic-push-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-push-classic
@@ -638,7 +638,7 @@ test-docker-scratch-push1:
 test-docker-scratch-push2:
   # Test the docker-scratch-push step (which copies the output to a scratch image) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
-  box: alpine
+  box: alpine:3.1
   services: 
     - name: test-docker-scratch-push-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-scratch-push
@@ -680,7 +680,7 @@ test-docker-scratch-push2:
         branch: $PAGERDUTY_BRANCH                           
 test-rdd1:
   # Test that we can use a remote docker daemon to build, run, test and push an image (part 1)
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -763,7 +763,7 @@ test-rdd1:
 test-rdd2:
   # Test the image that was pushed by test-rdd1
   # Note that this uses a different daemon so this will require the image to be pulled from the registry
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -818,7 +818,7 @@ test-rdd2:
         branch: $PAGERDUTY_BRANCH
 test-rdd-volumes1:
   # Test the use of bind mounts with a RDD
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -840,14 +840,14 @@ test-rdd-volumes1:
           cd test-rdd-volumes
           # Start a container with the host's /tmp directory mounted as /foo
           # Within that container create a file in /foo
-          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOCREATE=/foo/$BUILDID alpine < script1.sh
+          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOCREATE=/foo/$BUILDID alpine:3.1 < script1.sh
     - script:
         name: Start a second container with /tmp mounted and verify that it can see that file
         code: |
           cd test-rdd-volumes
           # Start a container with the host's /tmp directory mounted as /foo
           # Within that container test to see whether the file we created in the other container exists
-          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOTEST=/foo/$BUILDID alpine < script2.sh
+          docker run --entrypoint sh -i -v /tmp:/foo -e FILENAMETOTEST=/foo/$BUILDID alpine:3.1 < script2.sh
   after-steps:
     - nigeldeakin/pagerduty-notifier:
         service-key: $PAGERDUTY_SERVICE_KEY
@@ -855,7 +855,7 @@ test-rdd-volumes1:
         branch: $PAGERDUTY_BRANCH
 test-rdd-volumes2:
   # Test the use of volumes with a RDD
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -884,8 +884,8 @@ test-rdd-volumes2:
           touch $FILE_NAME
           # create a temporary container with the volume mounted which we will use to perform the copy
           export CONTAINER1_NAME=temp-test-rdd-volumes2-1-$BUILDID
-          echo docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine
-          docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine
+          echo docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine:3.1
+          docker create --mount source=$VOLUME_NAME,target=$MOUNT_DIR --name $CONTAINER1_NAME alpine:3.1
 
           echo docker cp $FILE_NAME $CONTAINER1_NAME:$MOUNT_DIR
           docker cp $FILE_NAME $CONTAINER1_NAME:$MOUNT_DIR
@@ -898,7 +898,7 @@ test-rdd-volumes2:
           # Start a container with the volume mounted as /foo
           # Within that container test to see whether the file we copied to that volume exists
           export CONTAINER2_NAME=temp-test-rdd-volumes2-2-$BUILDID
-          docker run --rm --entrypoint sh -i -v $VOLUME_NAME:/foo -e FILENAMETOTEST=/foo/$FILE_NAME alpine < script2.sh          
+          docker run --rm --entrypoint sh -i -v $VOLUME_NAME:/foo -e FILENAMETOTEST=/foo/$FILE_NAME alpine:3.1 < script2.sh          
     - script:
         name: Remove the volume
         code: |
@@ -910,7 +910,7 @@ test-rdd-volumes2:
         branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
-  box: alpine
+  box: alpine:3.1
   steps:    
     - script:
         name: Install Curl (needed by pagerduty-notifier)
@@ -1057,7 +1057,7 @@ test-non-rdd-artifacts1:
         branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
-  box: alpine
+  box: alpine:3.1
   base-path: /a/b/c
   steps:
     - script:
@@ -1139,7 +1139,7 @@ test-non-rdd-artifacts2:
         branch: $PAGERDUTY_BRANCH               
 test-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 1)
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:       
     - script:
@@ -1287,7 +1287,7 @@ test-rdd-artifacts1:
         branch: $PAGERDUTY_BRANCH
 test-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 2)
-  box: alpine
+  box: alpine:3.1
   base-path: /a/b/c
   docker: true
   steps:
@@ -1371,7 +1371,7 @@ test-rdd-artifacts2:
 test-fn1:
   # Simple Fn use case in which we start the fn server (using docker in docker) and build, deploy and call a function
   # This uses an old but fixed version of Fn.
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -1394,8 +1394,8 @@ test-fn1:
         code: |
           mkdir $WERCKER_ROOT/fn
           cd $WERCKER_ROOT/fn
-          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine  
-          mv fn_alpine fn
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine:3.1  
+          mv fn_alpine:3.1 fn
           chmod a+x $WERCKER_ROOT/fn/fn 
           export PATH=$WERCKER_ROOT/fn:$PATH
           fn --version
@@ -1451,7 +1451,7 @@ test-fn1:
 test-fn2:
   # Simple Fn use case in which we start the fn server (using the local docker rather than docker in docker) and build, deploy and call a function
   # This uses an old but fixed version of Fn.
-  box: alpine
+  box: alpine:3.1
   docker: true
   steps:
     - script:
@@ -1474,8 +1474,8 @@ test-fn2:
         code: |
           mkdir $WERCKER_ROOT/fn
           cd $WERCKER_ROOT/fn
-          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine  
-          mv fn_alpine fn
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine:3.1  
+          mv fn_alpine:3.1 fn
           chmod a+x $WERCKER_ROOT/fn/fn 
           export PATH=$WERCKER_ROOT/fn:$PATH
           fn --version
@@ -1531,7 +1531,7 @@ test-fn2:
 
 all-tests-passed:
   # This pipeline is dependent on all tests passing and is configured to report to SCM that the tests have passed
-  box: alpine
+  box: alpine:3.1
   steps:
     - script:
         name: Dummy step
@@ -1550,7 +1550,7 @@ all-tests-passed:
 # TPL_SUSPEND_JOB (optional) - Set to true to suspend further executions of the cronjob
 # TPL_NODE_SELECTOR (optional) - Set to a valid node selector, for example caste: patrician
 deploy-kube:
-  box: alpine
+  box: alpine:3.1
   steps:
     - bash-template:
         # convert deployment/cronjob.template.yml to deployment/cronjob.yml, substituting environment variables
