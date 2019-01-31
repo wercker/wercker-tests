@@ -1394,7 +1394,7 @@ test-fn1:
         code: |
           mkdir $WERCKER_ROOT/fn
           cd $WERCKER_ROOT/fn
-          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine:3.9  
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine 
           mv fn_alpine:3.9 fn
           chmod a+x $WERCKER_ROOT/fn/fn 
           export PATH=$WERCKER_ROOT/fn:$PATH
@@ -1474,7 +1474,7 @@ test-fn2:
         code: |
           mkdir $WERCKER_ROOT/fn
           cd $WERCKER_ROOT/fn
-          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine:3.9  
+          wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine
           mv fn_alpine:3.9 fn
           chmod a+x $WERCKER_ROOT/fn/fn 
           export PATH=$WERCKER_ROOT/fn:$PATH
