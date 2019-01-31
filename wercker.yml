@@ -117,7 +117,7 @@ build:
         branch: $PAGERDUTY_BRANCH               
 test-docker-build1:
   # Test that we can run the docker-build step, test it using docker-run and then push it to a Docker Hub repo
-  box: alpine:edge
+  box: alpine
   steps:
     - script:
         name: Get the a unique id for the run, common to all pipelines in the workflow
@@ -171,7 +171,7 @@ test-docker-build1:
 test-docker-build2:
   # Test the docker-build step (part 2)
   # Test that we can pull the newly-created image, start it as a service, and connect to it
-  box: alpine:edge
+  box: alpine
   services: 
     - name: test-docker-build-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-build
@@ -567,7 +567,7 @@ test-docker-push-classic1:
 test-docker-push-classic2:
   # Test the "classic" docker-push step (which commits the current container) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
-  box: alpine:edge
+  box: alpine
   services: 
     - name: test-docker-classic-push-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-push-classic
@@ -638,7 +638,7 @@ test-docker-scratch-push1:
 test-docker-scratch-push2:
   # Test the docker-scratch-push step (which copies the output to a scratch image) (part 2) 
   # Test that we can pull the newly-created image, start it and connect to it
-  box: alpine:edge
+  box: alpine
   services: 
     - name: test-docker-scratch-push-container
       id: docker.io/$USERNAME/wercker-test-$PROD_OR_STAGING:test-docker-scratch-push
@@ -680,7 +680,7 @@ test-docker-scratch-push2:
         branch: $PAGERDUTY_BRANCH                           
 test-rdd1:
   # Test that we can use a remote docker daemon to build, run, test and push an image (part 1)
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
@@ -763,7 +763,7 @@ test-rdd1:
 test-rdd2:
   # Test the image that was pushed by test-rdd1
   # Note that this uses a different daemon so this will require the image to be pulled from the registry
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
@@ -818,7 +818,7 @@ test-rdd2:
         branch: $PAGERDUTY_BRANCH
 test-rdd-volumes1:
   # Test the use of bind mounts with a RDD
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
@@ -855,7 +855,7 @@ test-rdd-volumes1:
         branch: $PAGERDUTY_BRANCH
 test-rdd-volumes2:
   # Test the use of volumes with a RDD
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
@@ -910,7 +910,7 @@ test-rdd-volumes2:
         branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
-  box: alpine:edge
+  box: alpine
   steps:    
     - script:
         name: Install Curl (needed by pagerduty-notifier)
@@ -1057,7 +1057,7 @@ test-non-rdd-artifacts1:
         branch: $PAGERDUTY_BRANCH
 test-non-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next in a non-rdd pipeline (when not using a RDD) (Part 1)
-  box: alpine:edge
+  box: alpine
   base-path: /a/b/c
   steps:
     - script:
@@ -1139,7 +1139,7 @@ test-non-rdd-artifacts2:
         branch: $PAGERDUTY_BRANCH               
 test-rdd-artifacts1:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 1)
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:       
     - script:
@@ -1287,7 +1287,7 @@ test-rdd-artifacts1:
         branch: $PAGERDUTY_BRANCH
 test-rdd-artifacts2:
   # Test that artifacts are passed correctly from one pipeline to the next when using a RDD (Part 2)
-  box: alpine:edge
+  box: alpine
   base-path: /a/b/c
   docker: true
   steps:
@@ -1371,7 +1371,7 @@ test-rdd-artifacts2:
 test-fn1:
   # Simple Fn use case in which we start the fn server (using docker in docker) and build, deploy and call a function
   # This uses an old but fixed version of Fn.
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
@@ -1451,7 +1451,7 @@ test-fn1:
 test-fn2:
   # Simple Fn use case in which we start the fn server (using the local docker rather than docker in docker) and build, deploy and call a function
   # This uses an old but fixed version of Fn.
-  box: alpine:edge
+  box: alpine
   docker: true
   steps:
     - script:
