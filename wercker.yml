@@ -1395,7 +1395,7 @@ test-fn1:
           mkdir $WERCKER_ROOT/fn
           cd $WERCKER_ROOT/fn
           wget --no-verbose https://github.com/fnproject/cli/releases/download/0.4.117/fn_alpine 
-          mv fn_alpine:3.9 fn
+          mv fn_alpine fn
           chmod a+x $WERCKER_ROOT/fn/fn 
           export PATH=$WERCKER_ROOT/fn:$PATH
           fn --version
